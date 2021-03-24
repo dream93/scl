@@ -1,6 +1,6 @@
 /**
  *
- * @file PopupBase.ts
+ * @file CCUtil.ts
  * @author dream
  * @description Cocos方法整合，如果Cocos版本升级，造成API修改，仅需修改此处
  *

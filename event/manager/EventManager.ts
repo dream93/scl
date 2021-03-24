@@ -1,3 +1,10 @@
+/**
+ *
+ * @file EventManager.ts
+ * @author dream
+ * @description 全局分发管理
+ *
+ */
 import { EventTarget } from "cc";
 
 export class EventManager {
