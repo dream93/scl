@@ -71,5 +71,32 @@ PopupManager.instance.getCurrentName(): string | null;
 PopupManager.instance.getPopup(name: string): Node | null;
 ```
 
+## 本地化存储
 
+`API`
+
+1. 初始化密钥
+```
+SqlUtil.init(key: string, iv: string);
+```
+
+2. 存储
+```
+SqlUtil.set(key: string, value: any);
+```
+
+3. 取出
+```
+SqlUtil.get(key: string, defaultValue?: any);
+```
+
+4. 移除
+```
+SqlUtil.remove(key: string);
+```
+
+5. 清空
+```
+SqlUtil.clear();
+```
 
