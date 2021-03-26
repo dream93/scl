@@ -26,13 +26,27 @@ export class CanvasAdapter extends Component {
     @property({
         type: Enum(ResolutionType)
     })
-    resolutionType: ResolutionType = ResolutionType.CUSTOM;
+    _resolutionType: ResolutionType = ResolutionType.CUSTOM;
+
+    get resolutionType() {
+        return this._resolutionType;
+    }
+
+    @property({
+        type: Enum(ResolutionType)
+    })
+    set resolutionType(type: ResolutionType) {
+        this._resolutionType = type;
+        this.setAdapter();
+    }
 
     onLoad() {
         this.setAdapter();
     }
 
     setAdapter() {
+
+        console.log(this.resolutionType);
 
         if (ResolutionType.EXACT_FIT == this.resolutionType) {
             console.error('该方式已不被支持');

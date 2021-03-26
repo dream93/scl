@@ -187,7 +187,6 @@ export class Toast {
             Toast.pNode.addComponent(Canvas);
             director.getScene()?.addChild(Toast.pNode);
             let size = view.getVisibleSize();
-            transform.priority = 100;
             transform.contentSize = size;
             transform.width = size.width;
             transform.height = size.height;

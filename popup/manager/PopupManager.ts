@@ -318,7 +318,6 @@ export class PopupManager {
         game.addPersistRootNode(this.popupNode);
         let size = view.getVisibleSize();
         let transform = this.popupNode.addComponent(UITransform);
-        transform.priority = 99;
         transform.contentSize = size;
         this.popupNode.position = v3(size.width / 2, size.height / 2, 0);
         this.popupInit = true;

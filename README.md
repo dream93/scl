@@ -100,3 +100,21 @@ SqlUtil.remove(key: string);
 SqlUtil.clear();
 ```
 
+## 组件
+
+### CanvasAdapter
+
+挂载后，选择模式
+- EXACT_FIT = ResolutionPolicy.EXACT_FIT, // 拉伸适配，目前已不被支持
+- NO_BORDER = ResolutionPolicy.NO_BORDER, // 铺满屏幕
+- SHOW_ALL = ResolutionPolicy.SHOW_ALL, // 内容完整显示，裁剪区域
+- FIXED_HEIGHT = ResolutionPolicy.FIXED_HEIGHT, // 适配高
+- FIXED_WIDTH = ResolutionPolicy.FIXED_WIDTH, // 适配宽
+- CUSTOM = 9 // 完整显示内容，但不裁剪区域
+
+### 吐司
+
+```
+Toast.makeTest(node: Node|null, test: string, time:number).show();
+```
+
