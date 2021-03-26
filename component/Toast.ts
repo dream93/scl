@@ -23,56 +23,14 @@ export class Toast {
     static readonly LENGTH_LONG: number = 3.5; // 长时间吐司
 
     private static pNode: Node | null = null;
-
-
-    private node: Node;
-    private _text: string = '';
-    /**
-     * 文字
-     */
-    get text() {
-        return this._text;
-    }
-    set text(text: string) {
-        this._text = text;
-        this.setText();
-    }
-    /**
-     * 时间
-     */
-    private _time: number = 1;
-    get time() {
-        return this._time;
-    }
-    set time(time: number) {
-        this._time = time;
-    }
-
-    /**
-     * 字体大小
-     */
-    private _textSize: number = 20;
-    get textSize() {
-        return this._textSize;
-    }
-    set textSize(size: number) {
-        this._textSize = size;
-        this.setTextSize();
-    }
-
-    /**
-     * 位置
-     */
-    private _gravity: Gravity = Gravity.BOTTOM;
-    get gravity() {
-        return this._gravity;
-    }
-    set gravity(gravity: Gravity) {
-        this._gravity = gravity;
-    }
-
     private bgNode: Node;
     private textNode: Node;
+
+    private node: Node;
+    private text: string = '';
+    private time: number = 1;
+    private textSize: number = 20;
+    private gravity: Gravity = Gravity.BOTTOM;
 
     private constructor(node: Node | null) {
         if (null == node) {
@@ -142,17 +100,51 @@ export class Toast {
             .start();
     }
 
-    private setText() {
+    /**
+     * 设置文字
+     * @param text 文字
+     * @returns 
+     */
+    setText(text: string): Toast {
+        this.text = text;
         let label = this.textNode.getComponent(Label)!;
         label.string = this.text;
+        return this;
     }
 
-    private setTextSize() {
+    /**
+     * 设置文字大小
+     * @param textSize 文字大小
+     * @returns 
+     */
+    setTextSize(textSize: number): Toast {
+        this.textSize = textSize;
         let label = this.textNode.getComponent(Label)!;
         label.fontSize = this.textSize;
+        return this;
     }
 
-    private setGravity() {
+    /**
+     * 设置时间
+     * @param time 时间 
+     * @returns 
+     */
+    setTime(time: number) {
+        this.time = time;
+        return this;
+    }
+
+    /**
+     * 设置位置
+     * @param gravity 位置
+     * @returns 
+     */
+    setGravity(gravity: Gravity): Toast {
+        this.gravity = gravity;
+        return this;
+    }
+
+    private setPosition() {
         let uiTransform = this.node.getComponent(UITransform)!;
         let bgUITransform = this.bgNode.getComponent(UITransform)!;
         if (Gravity.BOTTOM === this.gravity) {
@@ -176,7 +168,7 @@ export class Toast {
         let bgUITransform = this.bgNode.getComponent(UITransform)!;
         bgUITransform.width = uiTransform.width + label.fontSize * 4;
         bgUITransform.height = uiTransform.height;
-        this.setGravity();
+        this.setPosition();
     }
 
     private getPNode(): Node {
