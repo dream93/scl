@@ -7,6 +7,7 @@
  */
 
 import { BlockInputEvents, Canvas, director, game, instantiate, Layers, Node, Prefab, UITransform, v3, view } from "cc";
+import { App } from "../../App";
 import { CCUtil } from "../../util/CCUtil";
 import { PopupBase } from "../base/PopupBase";
 
@@ -90,6 +91,12 @@ export class PopupManager {
         if (null == name && null == option.path) {
             throw new Error('name、prefab、path不同同时为空');
         }
+
+        // 当前弹框不重复显示
+        if (name === this.getCurrentName()) {
+            return;
+        }
+
         // 弹框过程中，背景不可以点击
         this.blockInputNode!.active = true;
         let priority = option.priority || 0;
@@ -132,6 +139,12 @@ export class PopupManager {
     }
 
     private _show(name: string, node: Node, priority: number, params: any, keep: boolean) {
+        // 先从缓存中取出
+        let idx = this.popups.indexOf(name);
+        if (idx >= 0) {
+            this.popups.splice(idx, 1);
+        }
+
         // 层级高的优先显示
         let curPriority = this.getCurrentPopup()?.getComponent(UITransform)?.priority || 0;
         if (priority < curPriority) {
@@ -145,10 +158,6 @@ export class PopupManager {
             }
         } else if (!keep) {
             this._hideAll();
-            let idx = this.popups.indexOf(name);
-            if (idx >= 0) {
-                this.popups.splice(idx, 1);
-            }
             this.popups.push(name);
         }
         let popup = node.getComponent(PopupBase);
@@ -313,13 +322,10 @@ export class PopupManager {
         }
         this.popupNode = new Node('Popup');
         this.popupNode.layer = Layers.Enum.UI_2D;
-        this.popupNode.addComponent(Canvas);
-        director.getScene()?.addChild(this.popupNode);
-        game.addPersistRootNode(this.popupNode);
+        App.instance.root.addChild(this.popupNode);
         let size = view.getVisibleSize();
         let transform = this.popupNode.addComponent(UITransform);
         transform.contentSize = size;
-        this.popupNode.position = v3(size.width / 2, size.height / 2, 0);
         this.popupInit = true;
 
         this.blockInputNode = new Node('blockInputNode');

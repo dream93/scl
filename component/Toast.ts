@@ -7,6 +7,7 @@
  */
 
 import { BlockInputEvents, Canvas, color, director, ImageAsset, Label, Layers, Node, Sprite, SpriteFrame, Texture2D, tween, UIOpacity, UITransform, v3, view } from "cc";
+import { App } from "../App";
 
 /**
  * 位置
@@ -76,8 +77,8 @@ export class Toast {
      */
     static makeText(node: Node | null, text: string, time: number) {
         let toast = new Toast(node);
-        toast.text = text;
-        toast.time = time;
+        toast.setText(text);
+        toast.setTime(time);
         return toast;
     }
 
@@ -176,13 +177,12 @@ export class Toast {
             Toast.pNode = new Node('Toast');
             let transform = Toast.pNode.addComponent(UITransform);
             Toast.pNode.layer = Layers.Enum.UI_2D;
-            Toast.pNode.addComponent(Canvas);
-            director.getScene()?.addChild(Toast.pNode);
+            App.instance.root.addChild(Toast.pNode);
             let size = view.getVisibleSize();
             transform.contentSize = size;
             transform.width = size.width;
             transform.height = size.height;
-            Toast.pNode.position = v3(size.width / 2, size.height / 2, 0);
+            transform.priority = 100;
         }
         return Toast.pNode;
     }
