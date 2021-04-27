@@ -6,7 +6,7 @@
  *
  */
 
-import { BlockInputEvents, Canvas, director, game, instantiate, Layers, Node, Prefab, UITransform, v3, view } from "cc";
+import { BlockInputEvents, instantiate, Layers, Node, Prefab, UITransform, view } from "cc";
 import { App } from "../../App";
 import { CCUtil } from "../../util/CCUtil";
 import { PopupBase } from "../base/PopupBase";
@@ -80,9 +80,9 @@ export class PopupManager {
 
     /**
      * 显示弹框
-     * @param option {name:自定义弹框名字 prefab:Prefab path: 动态加载的路径 priority:层级 params: 传递参数 keep: 正在显示的弹框是否保留}
+     * @param option {name:自定义弹框名字 prefab:Prefab path: 动态加载的路径 siblingIndex:层级 params: 传递参数 keep: 正在显示的弹框是否保留}
      */
-    show(option: { name?: string, prefab?: Prefab, path?: string, priority?: number, params?: any, keep?: boolean }) {
+    show(option: { name?: string, prefab?: Prefab, path?: string, siblingIndex?: number, params?: any, keep?: boolean }) {
         if (!this.popupInit) {
             throw new Error('请先初始化UIManager');
         }
@@ -99,7 +99,7 @@ export class PopupManager {
 
         // 弹框过程中，背景不可以点击
         this.blockInputNode!.active = true;
-        let priority = option.priority || 0;
+        let siblingIndex = option.siblingIndex || 0;
         let node: Node | undefined;
         if (null != name) {
             node = this.nodes.get(name);
@@ -125,20 +125,20 @@ export class PopupManager {
                         }
                         node = instantiate(prefab);
                         this.nodes.set(name, node);
-                        this._show(name, node, priority, option.params, option.keep || false);
+                        this._show(name, node, siblingIndex, option.params, option.keep || false);
                     }
                 });
                 return;
             }
             node = instantiate(option.prefab);
             this.nodes.set(name, node);
-            this._show(name, node, priority, option.params, option.keep || false);
+            this._show(name, node, siblingIndex, option.params, option.keep || false);
         } else {
-            this._show(name, node, priority, option.params, option.keep || false);
+            this._show(name, node, siblingIndex, option.params, option.keep || false);
         }
     }
 
-    private _show(name: string, node: Node, priority: number, params: any, keep: boolean) {
+    private _show(name: string, node: Node, siblingIndex: number, params: any, keep: boolean) {
         // 先从缓存中取出
         let idx = this.popups.indexOf(name);
         if (idx >= 0) {
@@ -146,12 +146,12 @@ export class PopupManager {
         }
 
         // 层级高的优先显示
-        let curPriority = this.getCurrentPopup()?.getComponent(UITransform)?.priority || 0;
-        if (priority < curPriority) {
+        let curSiblingIndex = this.getCurrentPopup()?.getSiblingIndex() || 0;
+        if (siblingIndex < curSiblingIndex) {
             node.active = false;
             for (let i = 0; i <= this.popups.length - 1; i++) {
                 let tempNode = this.nodes.get(this.popups[i]);
-                if (priority <= (tempNode!.getComponent(UITransform)?.priority || 0)) {
+                if (siblingIndex <= (tempNode!.getSiblingIndex() || 0)) {
                     this.popups.splice(i, 0, name);
                     break;
                 }
@@ -174,10 +174,10 @@ export class PopupManager {
         if (null == uiTransform) {
             uiTransform = node.addComponent(UITransform);
         }
-        if (uiTransform.priority != priority) {
-            uiTransform.priority = priority;
+        if (node.getSiblingIndex() != siblingIndex) {
+            node.setSiblingIndex(siblingIndex);
         }
-        if (priority >= curPriority) {
+        if (siblingIndex >= curSiblingIndex) {
             popup!._show().then(() => {
                 this.blockInputNode!.active = false;
             });
@@ -333,8 +333,8 @@ export class PopupManager {
         this.blockInputNode.parent = this.popupNode;
         let blockInputTransform = this.blockInputNode.addComponent(UITransform);
         blockInputTransform.contentSize = size;
-        blockInputTransform.priority = 0;
         this.blockInputNode!.active = false;
+        this.blockInputNode.setSiblingIndex(0);
     }
 }
 

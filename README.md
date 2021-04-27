@@ -35,7 +35,7 @@ PopupManager.instance.init();
 ```
 3. 显示弹框
 ```
-PopupManager.instance.show(option: { name?: string, prefab?: Prefab, path?: string, priority?: number, params?: any, keep?: boolean });
+PopupManager.instance.show(option: { name?: string, prefab?: Prefab, path?: string, siblingIndex?: number, params?: any, keep?: boolean });
 ```
 
 |参数|类型|默认值|说明
@@ -43,7 +43,7 @@ PopupManager.instance.show(option: { name?: string, prefab?: Prefab, path?: stri
 |name|string|null|自定义弹框名字|
 |prefab|Prefab|null|Prefab|
 |path|string|null|动态加载的路径|
-|priority|number|0|层级|
+|siblingIndex|number|0|层级|
 |params|any|null|传递的参数|
 |keep|boolean|false|是否保留当前弹框|
 

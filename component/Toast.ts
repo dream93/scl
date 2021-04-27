@@ -6,7 +6,7 @@
  *
  */
 
-import { BlockInputEvents, Canvas, color, director, ImageAsset, Label, Layers, Node, Sprite, SpriteFrame, Texture2D, tween, UIOpacity, UITransform, v3, view } from "cc";
+import { BlockInputEvents, color, ImageAsset, Label, Layers, Node, Sprite, SpriteFrame, Texture2D, tween, UIOpacity, UITransform, v3, view } from "cc";
 import { App } from "../App";
 
 /**
@@ -177,12 +177,11 @@ export class Toast {
             Toast.pNode = new Node('Toast');
             let transform = Toast.pNode.addComponent(UITransform);
             Toast.pNode.layer = Layers.Enum.UI_2D;
-            App.instance.root.addChild(Toast.pNode);
+            App.instance.root.insertChild(Toast.pNode, 100);
             let size = view.getVisibleSize();
             transform.contentSize = size;
             transform.width = size.width;
             transform.height = size.height;
-            transform.priority = 100;
         }
         return Toast.pNode;
     }
