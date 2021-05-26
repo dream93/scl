@@ -94,6 +94,7 @@ export class PopupManager {
 
         // 当前弹框不重复显示
         if (name === this.getCurrentName()) {
+            console.warn('当前界面已经展示');
             return;
         }
 
@@ -146,12 +147,12 @@ export class PopupManager {
         }
 
         // 层级高的优先显示
-        let curSiblingIndex = this.getCurrentPopup()?.getSiblingIndex() || 0;
+        let curSiblingIndex = this.getCurrentPopup()?.getComponent(UITransform)?.priority || 0;
         if (siblingIndex < curSiblingIndex) {
             node.active = false;
             for (let i = 0; i <= this.popups.length - 1; i++) {
                 let tempNode = this.nodes.get(this.popups[i]);
-                if (siblingIndex <= (tempNode!.getSiblingIndex() || 0)) {
+                if (siblingIndex <= (tempNode!.getComponent(UITransform)?.priority || 0)) {
                     this.popups.splice(i, 0, name);
                     break;
                 }
@@ -174,8 +175,8 @@ export class PopupManager {
         if (null == uiTransform) {
             uiTransform = node.addComponent(UITransform);
         }
-        if (node.getSiblingIndex() != siblingIndex) {
-            node.setSiblingIndex(siblingIndex);
+        if (uiTransform.priority != siblingIndex) {
+            uiTransform.priority = siblingIndex;
         }
         if (siblingIndex >= curSiblingIndex) {
             popup!._show().then(() => {
@@ -333,8 +334,9 @@ export class PopupManager {
         this.blockInputNode.parent = this.popupNode;
         let blockInputTransform = this.blockInputNode.addComponent(UITransform);
         blockInputTransform.contentSize = size;
+        blockInputTransform.priority = 0;
         this.blockInputNode!.active = false;
-        this.blockInputNode.setSiblingIndex(0);
+
     }
 }
 

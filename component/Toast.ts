@@ -177,11 +177,12 @@ export class Toast {
             Toast.pNode = new Node('Toast');
             let transform = Toast.pNode.addComponent(UITransform);
             Toast.pNode.layer = Layers.Enum.UI_2D;
-            App.instance.root.insertChild(Toast.pNode, 100);
+            App.instance.root.addChild(Toast.pNode);
             let size = view.getVisibleSize();
             transform.contentSize = size;
             transform.width = size.width;
             transform.height = size.height;
+            transform.priority = 100;
         }
         return Toast.pNode;
     }
