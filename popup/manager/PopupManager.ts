@@ -7,7 +7,7 @@
  */
 
 import { BlockInputEvents, instantiate, Layers, Node, Prefab, UITransform, view } from "cc";
-import { App } from "../../App";
+import { rootNode } from "../../SCL";
 import { CCUtil } from "../../util/CCUtil";
 import { PopupBase } from "../base/PopupBase";
 
@@ -139,7 +139,7 @@ export class PopupManager {
         }
     }
 
-    private _show(name: string, node: Node, siblingIndex: number, params: any, keep: boolean) {
+    private _show(name: string, node: Node, zIndex: number, params: any, keep: boolean) {
         // 先从缓存中取出
         let idx = this.popups.indexOf(name);
         if (idx >= 0) {
@@ -147,12 +147,12 @@ export class PopupManager {
         }
 
         // 层级高的优先显示
-        let curSiblingIndex = this.getCurrentPopup()?.getComponent(UITransform)?.priority || 0;
-        if (siblingIndex < curSiblingIndex) {
+        let curZIndex = this.getCurrentPopup()?.zIndex || 0;
+        if (zIndex < curZIndex) {
             node.active = false;
             for (let i = 0; i <= this.popups.length - 1; i++) {
                 let tempNode = this.nodes.get(this.popups[i]);
-                if (siblingIndex <= (tempNode!.getComponent(UITransform)?.priority || 0)) {
+                if (zIndex <= (tempNode!.zIndex || 0)) {
                     this.popups.splice(i, 0, name);
                     break;
                 }
@@ -171,14 +171,10 @@ export class PopupManager {
             node.removeFromParent();
             node.parent = this.popupNode;
         }
-        let uiTransform = node.getComponent(UITransform);
-        if (null == uiTransform) {
-            uiTransform = node.addComponent(UITransform);
+        if (node.zIndex != zIndex) {
+            node.zIndex = zIndex;
         }
-        if (uiTransform.priority != siblingIndex) {
-            uiTransform.priority = siblingIndex;
-        }
-        if (siblingIndex >= curSiblingIndex) {
+        if (zIndex >= curZIndex) {
             popup!._show().then(() => {
                 this.blockInputNode!.active = false;
             });
@@ -323,7 +319,7 @@ export class PopupManager {
         }
         this.popupNode = new Node('Popup');
         this.popupNode.layer = Layers.Enum.UI_2D;
-        App.instance.root.addChild(this.popupNode);
+        rootNode.addChild(this.popupNode);
         let size = view.getVisibleSize();
         let transform = this.popupNode.addComponent(UITransform);
         transform.contentSize = size;
@@ -332,9 +328,9 @@ export class PopupManager {
         this.blockInputNode = new Node('blockInputNode');
         this.blockInputNode.addComponent(BlockInputEvents);
         this.blockInputNode.parent = this.popupNode;
+        this.blockInputNode.zIndex = 0;
         let blockInputTransform = this.blockInputNode.addComponent(UITransform);
         blockInputTransform.contentSize = size;
-        blockInputTransform.priority = 0;
         this.blockInputNode!.active = false;
 
     }

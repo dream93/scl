@@ -1,3 +1,16 @@
+
+/**
+ * Predefined variables
+ * Name = RandomUtil
+ * DateTime = Thu Jan 13 2022 22:20:53 GMT+0800 (中国标准时间)
+ * Author = dream93
+ * FileBasename = RandomUtil.ts
+ * FileBasenameNoExtension = RandomUtil
+ * URL = db://assets/libs/util/RandomUtil.ts
+ * ManualUrl = https://docs.cocos.com/creator/3.4/manual/zh/
+ *
+ */
+
 export module RandomUtil {
 
     /**
@@ -7,8 +20,8 @@ export module RandomUtil {
      */
     export function random(min: number, max?: number) {
         if (!max) {
-            min = 0;
             max = min;
+            min = 0;
         }
         return min + Math.random() * (max - min);
     }
