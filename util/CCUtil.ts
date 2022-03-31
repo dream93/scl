@@ -6,20 +6,49 @@
  *
  */
 
-import { Asset, resources, __private } from "cc";
+import { Asset, assetManager, AssetManager, resources } from "cc";
+
+export type Constructor<T extends Asset> = new () => T;
 
 export module CCUtil {
 
     /**
-     * 记载resources目录下的资源
-     * @param option {paths: 路径, type: 类型 onProgress: 进度回调 onComplete:完成回调}
+     * 加载bundle
+     * @param bundleName 
+     * @returns 
      */
-    export function load<T extends Asset>(option: {
-        paths: string,
-        type: __private.cocos_core_asset_manager_shared_AssetType<T> | null,
-        onProgress?: __private.cocos_core_asset_manager_shared_ProgressCallback | null,
-        onComplete?: __private.cocos_core_asset_manager_shared_CompleteCallbackWithData<T> | null
-    }): void {
-        resources.load(option.paths, option.type, option.onProgress!, option.onComplete!);
+    export function loadBundle(bundleName: string) {
+        return new Promise((resolve, reject) => {
+            assetManager.loadBundle(bundleName, (err, bundle) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(bundle);
+            });
+        });
+    }
+
+    /**
+     * 加载资源
+     * @param option 
+     * @returns 
+     */
+    export function loadAssset<T extends Asset>(option: { paths: string, bundle?: AssetManager.Bundle, type: Constructor<T> }): Promise<T> {
+        let bundle = option.bundle || resources;
+        let assset = bundle.get(option.paths, option.type);
+        if (null != assset) {
+            return Promise.resolve(assset);
+        }
+        return new Promise((resolve, reject) => {
+            bundle.load(option.paths, option.type, (err, asset: T) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(asset);
+                return;
+            });
+        });
     }
 }
