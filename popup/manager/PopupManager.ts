@@ -59,21 +59,18 @@ export class PopupManager {
             return;
         }
         if (null != option.url) {
-            CCUtil.load({
+            CCUtil.loadAsset({
                 paths: option.url,
-                type: Prefab,
-                onComplete: (err: Error | null, prefab: Prefab) => {
-                    if (err) {
-                        console.error(`${option.url}加载失败`);
-                        return;
-                    }
-                    this.setNameByPath(option.url!, prefab.data._name);
-                    if (null == name) {
-                        name = prefab.data._name;
-                    }
-                    let node = instantiate(prefab);
-                    this.nodes.set(name, node);
+                type: Prefab
+            }).then((prefab) => {
+                this.setNameByPath(option.url!, prefab.data._name);
+                if (null == name) {
+                    name = prefab.data._name;
                 }
+                let node = instantiate(prefab);
+                this.nodes.set(name, node);
+            }).catch((err) => {
+                console.error(`${option.url}加载失败`);
             });
         }
     }
@@ -111,23 +108,20 @@ export class PopupManager {
                     this.blockInputNode!.active = false;
                     throw new Error('首次创建必须传入prefab或者path');
                 }
-                CCUtil.load({
+                CCUtil.loadAsset({
                     paths: option.path,
-                    type: Prefab,
-                    onComplete: (err: Error | null, prefab: Prefab) => {
-                        if (err) {
-                            console.error(`${option.path}加载失败`);
-                            this.blockInputNode!.active = false;
-                            return;
-                        }
-                        this.setNameByPath(option.path!, prefab.data._name);
-                        if (null == name) {
-                            name = prefab.data._name;
-                        }
-                        node = instantiate(prefab);
-                        this.nodes.set(name, node);
-                        this._show(name, node, siblingIndex, option.params, option.keep || false);
+                    type: Prefab
+                }).then((prefab: Prefab) => {
+                    this.setNameByPath(option.path!, prefab.data._name);
+                    if (null == name) {
+                        name = prefab.data._name;
                     }
+                    node = instantiate(prefab);
+                    this.nodes.set(name, node);
+                    this._show(name, node, siblingIndex, option.params, option.keep || false);
+                }).catch((err) => {
+                    console.error(`${option.path}加载失败`);
+                    this.blockInputNode!.active = false;
                 });
                 return;
             }
@@ -167,10 +161,10 @@ export class PopupManager {
             throw new Error('请将Popup继承PopupBase');
         }
         popup._init(name, params);
-        if (node.parent != this.popupNode) {
-            node.removeFromParent();
-            node.parent = this.popupNode;
+        if (node.parent == this.popupNode) {
+            node.parent = null;
         }
+        node.parent = this.popupNode;
         if (node.zIndex != zIndex) {
             node.zIndex = zIndex;
         }

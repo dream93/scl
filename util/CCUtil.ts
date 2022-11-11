@@ -34,11 +34,11 @@ export module CCUtil {
      * @param option 
      * @returns 
      */
-    export function loadAssset<T extends Asset>(option: { paths: string, bundle?: AssetManager.Bundle, type: Constructor<T> }): Promise<T> {
+    export function loadAsset<T extends Asset>(option: { paths: string, bundle?: AssetManager.Bundle, type: Constructor<T> }): Promise<T> {
         let bundle = option.bundle || resources;
-        let assset = bundle.get(option.paths, option.type);
-        if (null != assset) {
-            return Promise.resolve(assset);
+        let asset = bundle.get(option.paths, option.type);
+        if (null != asset) {
+            return Promise.resolve(asset);
         }
         return new Promise((resolve, reject) => {
             bundle.load(option.paths, option.type, (err, asset: T) => {

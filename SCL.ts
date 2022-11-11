@@ -1,4 +1,4 @@
-import { Canvas, director, game, Layers, Node, UITransform, v3, view } from "cc";
+import { Canvas, director, Layers, Node, UITransform, v3, view } from "cc";
 import { PopupManager } from "./popup/manager/PopupManager";
 
 /**
@@ -14,7 +14,7 @@ import { PopupManager } from "./popup/manager/PopupManager";
  * 框架初始类
  */
 
-export let rootNode: Node = null;
+export let rootNode: Node = null!;
 
 export class SCL {
 
@@ -30,24 +30,32 @@ export class SCL {
         // Canvas组件依赖UITransform，所以不用额外添加UITransform组件
         // 如果再次添加，会产生两个UITransform组件
         // 相关讨论 https://forum.cocos.org/t/topic/127107
-        let transform = rootNode.getComponent(UITransform);
+        let transform = rootNode.getComponent(UITransform)!;
         director.getScene()?.addChild(rootNode);
-        game.addPersistRootNode(rootNode);
+        director.addPersistRootNode(rootNode);
         let size = view.getVisibleSize();
 
         transform.contentSize = size;
         rootNode.position = v3(size.width / 2, size.height / 2, 0);
 
         // 自定义zIndex
-        Object.defineProperty(Node, 'zIndex', {
+        Object.defineProperty(Node.prototype, 'zIndex', {
             set(zIndex: number) {
                 this._zIndex = zIndex;
                 let self = this as Node;
                 if (self.parent) {
                     // 排序
-                    for (let i = self.parent.children.length - 1; i >= 0; i--) {
-                        if (zIndex >= self.parent.children[i].zIndex) {
-                            self.setSiblingIndex(self.parent.children[i].getSiblingIndex());
+                    const children = self.parent.children;
+                    for (let i = children.length - 1; i >= 0; i--) {
+                        if (children[i] === self) {
+                            continue;
+                        }
+                        if (zIndex >= children[i].zIndex) {
+                            self.setSiblingIndex(children[i].getSiblingIndex() + 1);
+                            break;
+                        }
+                        if (i === 0) {
+                            self.setSiblingIndex(0);
                         }
                     }
                 }
