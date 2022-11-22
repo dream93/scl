@@ -26,7 +26,7 @@ export class CanvasAdapter extends Component {
     @property({
         type: Enum(ResolutionType)
     })
-    _resolutionType: ResolutionType = ResolutionType.CUSTOM;
+    private _resolutionType: ResolutionType = ResolutionType.CUSTOM;
 
     get resolutionType() {
         return this._resolutionType;
@@ -45,9 +45,6 @@ export class CanvasAdapter extends Component {
     }
 
     setAdapter() {
-
-        console.log(this.resolutionType);
-
         if (ResolutionType.EXACT_FIT == this.resolutionType) {
             console.error('该方式已不被支持');
             return;

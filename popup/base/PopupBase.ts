@@ -32,13 +32,13 @@ export class PopupBase extends Component {
      * 是否设置点击拦截
      */
     @property(CCBoolean)
-    blockInput: boolean = true;
+    private blockInput: boolean = true;
 
     /**
      * 是否显示弹框动画
      */
     @property(CCBoolean)
-    anim: boolean = true;
+    private anim: boolean = true;
 
     /**
      * 弹框动画类型
@@ -49,7 +49,7 @@ export class PopupBase extends Component {
             return (this as any).anim;
         }
     })
-    animType: AnimType = AnimType.SCALE;
+    private animType: AnimType = AnimType.SCALE;
 
     private _popupName: string = "";
     /**

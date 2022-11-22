@@ -21,17 +21,17 @@ export class PopupManager {
         return this._instance;
     }
 
-    private popupNode: Node | null = null;
-    private blockInputNode: Node | null = null;
-    private popups: Array<string>;
-    private nodes: Map<string, Node>;
-    private paths: Map<string, string>;
-    private popupInit: boolean = false;
+    private _popupNode: Node | null = null;
+    private _blockInputNode: Node | null = null;
+    private _popups: Array<string>;
+    private _nodes: Map<string, Node>;
+    private _paths: Map<string, string>;
+    private _popupInit: boolean = false;
 
     private constructor() {
-        this.popups = new Array();
-        this.nodes = new Map();
-        this.paths = new Map();
+        this._popups = new Array();
+        this._nodes = new Map();
+        this._paths = new Map();
     }
 
     /**
@@ -49,13 +49,13 @@ export class PopupManager {
      */
     preLoad(option: { name?: string, prefab?: Prefab, url?: string }) {
         let name = option.name || option.prefab?.data._name || this.getNameByPath(option.url);
-        if (null != name && null != this.nodes.get(name)) {
+        if (null != name && null != this._nodes.get(name)) {
             console.warn(`${name}已经预加载了`);
             return;
         }
         if (null != option.prefab) {
             let node = instantiate(option.prefab);
-            this.nodes.set(name, node);
+            this._nodes.set(name, node);
             return;
         }
         if (null != option.url) {
@@ -68,7 +68,7 @@ export class PopupManager {
                     name = prefab.data._name;
                 }
                 let node = instantiate(prefab);
-                this.nodes.set(name, node);
+                this._nodes.set(name, node);
             }).catch((err) => {
                 console.error(`${option.url}加载失败`);
             });
@@ -80,7 +80,7 @@ export class PopupManager {
      * @param option {name:自定义弹框名字 prefab:Prefab path: 动态加载的路径 siblingIndex:层级 params: 传递参数 keep: 正在显示的弹框是否保留}
      */
     show(option: { name?: string, prefab?: Prefab, path?: string, siblingIndex?: number, params?: any, keep?: boolean }) {
-        if (!this.popupInit) {
+        if (!this._popupInit) {
             throw new Error('请先初始化UIManager');
         }
         // 如果需要一个prefab对应两个弹框，则名字需要自行定义
@@ -96,16 +96,16 @@ export class PopupManager {
         }
 
         // 弹框过程中，背景不可以点击
-        this.blockInputNode!.active = true;
+        this._blockInputNode!.active = true;
         let siblingIndex = option.siblingIndex || 0;
         let node: Node | undefined;
         if (null != name) {
-            node = this.nodes.get(name);
+            node = this._nodes.get(name);
         }
         if (null == node) {
             if (null == option.prefab) {
                 if (null == option.path) {
-                    this.blockInputNode!.active = false;
+                    this._blockInputNode!.active = false;
                     throw new Error('首次创建必须传入prefab或者path');
                 }
                 CCUtil.loadAsset({
@@ -117,16 +117,16 @@ export class PopupManager {
                         name = prefab.data._name;
                     }
                     node = instantiate(prefab);
-                    this.nodes.set(name, node);
+                    this._nodes.set(name, node);
                     this._show(name, node, siblingIndex, option.params, option.keep || false);
                 }).catch((err) => {
                     console.error(`${option.path}加载失败`);
-                    this.blockInputNode!.active = false;
+                    this._blockInputNode!.active = false;
                 });
                 return;
             }
             node = instantiate(option.prefab);
-            this.nodes.set(name, node);
+            this._nodes.set(name, node);
             this._show(name, node, siblingIndex, option.params, option.keep || false);
         } else {
             this._show(name, node, siblingIndex, option.params, option.keep || false);
@@ -135,62 +135,62 @@ export class PopupManager {
 
     private _show(name: string, node: Node, zIndex: number, params: any, keep: boolean) {
         // 先从缓存中取出
-        let idx = this.popups.indexOf(name);
+        let idx = this._popups.indexOf(name);
         if (idx >= 0) {
-            this.popups.splice(idx, 1);
+            this._popups.splice(idx, 1);
         }
 
         // 层级高的优先显示
         let curZIndex = this.getCurrentPopup()?.zIndex || 0;
         if (zIndex < curZIndex) {
             node.active = false;
-            for (let i = 0; i <= this.popups.length - 1; i++) {
-                let tempNode = this.nodes.get(this.popups[i]);
+            for (let i = 0; i <= this._popups.length - 1; i++) {
+                let tempNode = this._nodes.get(this._popups[i]);
                 if (zIndex <= (tempNode!.zIndex || 0)) {
-                    this.popups.splice(i, 0, name);
+                    this._popups.splice(i, 0, name);
                     break;
                 }
             }
         } else if (!keep) {
             this._hideAll();
-            this.popups.push(name);
+            this._popups.push(name);
         }
         let popup = node.getComponent(PopupBase);
         if (null == popup) {
-            this.blockInputNode!.active = false;
+            this._blockInputNode!.active = false;
             throw new Error('请将Popup继承PopupBase');
         }
         popup._init(name, params);
-        if (node.parent == this.popupNode) {
+        if (node.parent == this._popupNode) {
             node.parent = null;
         }
-        node.parent = this.popupNode;
+        node.parent = this._popupNode;
         if (node.zIndex != zIndex) {
             node.zIndex = zIndex;
         }
         if (zIndex >= curZIndex) {
             popup!._show().then(() => {
-                this.blockInputNode!.active = false;
+                this._blockInputNode!.active = false;
             });
         } else {
-            this.blockInputNode!.active = false;
+            this._blockInputNode!.active = false;
         }
     }
 
     private showLast() {
         let node: Node | null = null;
-        if (this.popups.length > 0) {
-            let name = this.popups[this.popups.length - 1];
-            node = this.nodes.get(name) || null;
+        if (this._popups.length > 0) {
+            let name = this._popups[this._popups.length - 1];
+            node = this._nodes.get(name) || null;
         }
         if (null == node) {
             return;
         }
         if (!node.active) {
-            this.blockInputNode!.active = true;
+            this._blockInputNode!.active = true;
             let ui = node.getComponent(PopupBase)!;
             ui._show().then(() => {
-                this.blockInputNode!.active = false;
+                this._blockInputNode!.active = false;
             });
         }
     }
@@ -200,10 +200,10 @@ export class PopupManager {
      * @param name 弹框的名字
      */
     hide(name: string) {
-        let idx = this.popups.indexOf(name);
-        let isLast = idx === this.popups.length - 1;
+        let idx = this._popups.indexOf(name);
+        let isLast = idx === this._popups.length - 1;
         if (idx >= 0) {
-            this.popups.splice(idx, 1);
+            this._popups.splice(idx, 1);
         }
         this._hideUI(name);
         if (isLast) {
@@ -216,17 +216,17 @@ export class PopupManager {
      */
     hideAll() {
         this._hideAll();
-        this.popups.length = 0;
+        this._popups.length = 0;
     }
 
     _hideAll() {
-        for (let i = 0; i < this.popups.length; i++) {
-            this._hideUI(this.popups[i]);
+        for (let i = 0; i < this._popups.length; i++) {
+            this._hideUI(this._popups[i]);
         }
     }
 
     private _hideUI(name: string) {
-        let node = this.nodes.get(name);
+        let node = this._nodes.get(name);
         if (null == node) {
             console.warn(`${name}已被销毁`);
             return;
@@ -242,11 +242,11 @@ export class PopupManager {
      */
     remove(name: string) {
         this.hide(name);
-        let node = this.nodes.get(name);
+        let node = this._nodes.get(name);
         if (null == node) {
             return;
         }
-        this.nodes.delete(name);
+        this._nodes.delete(name);
         let ui = node.getComponent(PopupBase);
         ui!._remove();
     }
@@ -256,7 +256,7 @@ export class PopupManager {
      */
     removeAll() {
         this.hideAll();
-        for (let name in this.nodes) {
+        for (let name in this._nodes) {
             this.remove(name);
         }
     }
@@ -270,7 +270,7 @@ export class PopupManager {
         if (null == name) {
             return null;
         }
-        return this.nodes.get(name) || null;
+        return this._nodes.get(name) || null;
     }
 
     /**
@@ -278,8 +278,8 @@ export class PopupManager {
      * @returns 弹框名字，如果当前没有弹框，则返回null
      */
     getCurrentName(): string | null {
-        if (this.popups.length > 0) {
-            return this.popups[this.popups.length - 1];
+        if (this._popups.length > 0) {
+            return this._popups[this._popups.length - 1];
         }
         return null;
     }
@@ -290,12 +290,12 @@ export class PopupManager {
      * @returns 弹框Node,如果没有对应的弹框，则返回null
      */
     getPopup(name: string): Node | null {
-        return this.nodes.get(name) || null;
+        return this._nodes.get(name) || null;
     }
 
     private setNameByPath(path: string, name: string) {
         if (null == this.getNameByPath(path)) {
-            this.paths.set(path, name);
+            this._paths.set(path, name);
         }
     }
 
@@ -303,29 +303,30 @@ export class PopupManager {
         if (null == path) {
             return null;
         }
-        return this.paths.get(path);
+        return this._paths.get(path);
     }
 
 
     private setParent() {
-        if (this.popupInit) {
+        if (this._popupInit) {
             throw new Error('PopupManager已经初始化了');
         }
-        this.popupNode = new Node('Popup');
-        this.popupNode.layer = Layers.Enum.UI_2D;
-        rootNode.addChild(this.popupNode);
-        let size = view.getVisibleSize();
-        let transform = this.popupNode.addComponent(UITransform);
-        transform.contentSize = size;
-        this.popupInit = true;
+        this._popupNode = new Node('Popup');
+        this._popupNode.layer = Layers.Enum.UI_2D;
+        this._popupNode.parent = rootNode;
 
-        this.blockInputNode = new Node('blockInputNode');
-        this.blockInputNode.addComponent(BlockInputEvents);
-        this.blockInputNode.parent = this.popupNode;
-        this.blockInputNode.zIndex = 0;
-        let blockInputTransform = this.blockInputNode.addComponent(UITransform);
+        let size = view.getVisibleSize();
+        let transform = this._popupNode.addComponent(UITransform);
+        transform.contentSize = size;
+        this._popupInit = true;
+
+        this._blockInputNode = new Node('_blockInputNode');
+        this._blockInputNode.addComponent(BlockInputEvents);
+        this._blockInputNode.parent = this._popupNode;
+        this._blockInputNode.zIndex = 0;
+        let blockInputTransform = this._blockInputNode.addComponent(UITransform);
         blockInputTransform.contentSize = size;
-        this.blockInputNode!.active = false;
+        this._blockInputNode!.active = false;
 
     }
 }
