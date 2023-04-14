@@ -1,8 +1,8 @@
 /**
  *
  * @file CanvasAdapter.ts
- * @author dream
- * @description 适配管理
+ * @author dream93
+ * @description 场景适配管理
  *
  */
 

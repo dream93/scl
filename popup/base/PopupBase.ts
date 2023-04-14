@@ -59,6 +59,8 @@ export class PopupBase extends Component {
         return this._popupName;
     }
 
+    _isShow = false;
+
     onLoad() {
         if (this.blockInput) {
             this.node.addComponent(BlockInputEvents);
@@ -77,6 +79,7 @@ export class PopupBase extends Component {
     init(data: any) { };
 
     _show(): Promise<void> {
+        this._isShow = true;
         this.node.active = true;
         return new Promise((resolve, reject) => {
             if (this.anim) {
@@ -124,13 +127,6 @@ export class PopupBase extends Component {
 
     _remove() {
         this.node.destroy();
-    }
-
-    /**
-     * 隐藏该UI
-     */
-    hideUI() {
-        PopupManager.instance.hide(this.popupName);
     }
 
     /**

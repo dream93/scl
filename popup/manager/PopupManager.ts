@@ -1,15 +1,32 @@
 /**
- *
- * @file PopupManager.ts
- * @author dream
- * @description 弹框管理类
- *
+ * @author dream93
+ * @description 弹框基类
+ *              弹框展示逻辑
+ *              1. 优先级高的先展示
+ *              2. 同优先级后来的先展示
  */
 
-import { BlockInputEvents, instantiate, Layers, Node, Prefab, UITransform, view } from "cc";
-import { rootNode } from "../../SCL";
-import { CCUtil } from "../../util/CCUtil";
+import { BlockInputEvents, instantiate, Layers, Node, path, Prefab, UITransform, Vec3 } from "cc";
 import { PopupBase } from "../base/PopupBase";
+import { ResUtil } from "../../util/ResUtil";
+import { rootNode } from "../../SCL";
+
+type PopupShowOption = {
+    bundleName?: string,
+    name?: string,
+    prefab?: Prefab,
+    path?: string,
+    priority?: number,
+    params?: any,
+    closePosition?: Vec3,
+    keep?: boolean
+}
+
+export enum PopupCacheMode {
+    ONCE, // 销毁预制体及实例
+    CACHE, // 保留预制体，销毁实例
+    AWAY // 保留预制体及实例
+}
 
 export class PopupManager {
 
@@ -21,261 +38,111 @@ export class PopupManager {
         return this._instance;
     }
 
-    private _popupNode: Node | null = null;
-    private _blockInputNode: Node | null = null;
-    private _popups: Array<string>;
-    private _nodes: Map<string, Node>;
-    private _paths: Map<string, string>;
-    private _popupInit: boolean = false;
-
-    private constructor() {
-        this._popups = new Array();
-        this._nodes = new Map();
-        this._paths = new Map();
+    private _init = false;
+    private _popupNode: Node = null!;
+    private _blockInputNode: Node = null!;
+    private _showOptions: PopupShowOption[] = [];
+    private _curOption: PopupShowOption | null = null;
+    private _cacheNodeMap: { [key: string]: Node | null } = {};
+    private _cachePrefabMap: { [key: string]: Prefab | null } = {};
+    private _popups: string[] = [];
+    get popups() {
+        return this._popups;
     }
 
     /**
-     * 初始化
-     * 主要实例化父节点
+     * @description 弹框初始化
+     *              框架内已处理
      */
     init() {
-        this.setParent();
+        this.initParent();
     }
 
     /**
-     * 预加载Prefab，提前实例化
-     * @param option  {name: 自定义名字 prafab: Prefab url: 动态加载的prefab的名字}
-     * @returns 
+     * @description 展示弹框
+     * @param option 弹框参数
      */
-    preLoad(option: { name?: string, prefab?: Prefab, url?: string }) {
-        let name = option.name || option.prefab?.data._name || this.getNameByPath(option.url);
-        if (null != name && null != this._nodes.get(name)) {
-            console.warn(`${name}已经预加载了`);
-            return;
+    show(option: PopupShowOption) {
+        if (!this._init) {
+            throw new Error('请先初始化PopupManager');
         }
-        if (null != option.prefab) {
-            let node = instantiate(option.prefab);
-            this._nodes.set(name, node);
-            return;
+        // 处理名字
+        const name = option.name = option.name || option.prefab?.data?.name || option.path && path.basename(option.path);
+        if (!name) {
+            throw new Error('name、prefab、path不能同时为空');
         }
-        if (null != option.url) {
-            CCUtil.loadAsset({
-                paths: option.url,
-                type: Prefab
-            }).then((prefab) => {
-                this.setNameByPath(option.url!, prefab.data._name);
-                if (null == name) {
-                    name = prefab.data._name;
-                }
-                let node = instantiate(prefab);
-                this._nodes.set(name, node);
-            }).catch((err) => {
-                console.error(`${option.url}加载失败`);
-            });
-        }
-    }
-
-    /**
-     * 显示弹框
-     * @param option {name:自定义弹框名字 prefab:Prefab path: 动态加载的路径 siblingIndex:层级 params: 传递参数 keep: 正在显示的弹框是否保留}
-     */
-    show(option: { name?: string, prefab?: Prefab, path?: string, siblingIndex?: number, params?: any, keep?: boolean }) {
-        if (!this._popupInit) {
-            throw new Error('请先初始化UIManager');
-        }
-        // 如果需要一个prefab对应两个弹框，则名字需要自行定义
-        let name = option.name || option.prefab?.data._name || this.getNameByPath(option.path);
-        if (null == name && null == option.path) {
-            throw new Error('name、prefab、path不同同时为空');
-        }
-
-        // 当前弹框不重复显示
-        if (name === this.getCurrentName()) {
-            console.warn('当前界面已经展示');
-            return;
-        }
-
-        // 弹框过程中，背景不可以点击
-        this._blockInputNode!.active = true;
-        let siblingIndex = option.siblingIndex || 0;
-        let node: Node | undefined;
-        if (null != name) {
-            node = this._nodes.get(name);
-        }
-        if (null == node) {
-            if (null == option.prefab) {
-                if (null == option.path) {
-                    this._blockInputNode!.active = false;
-                    throw new Error('首次创建必须传入prefab或者path');
-                }
-                CCUtil.loadAsset({
-                    paths: option.path,
-                    type: Prefab
-                }).then((prefab: Prefab) => {
-                    this.setNameByPath(option.path!, prefab.data._name);
-                    if (null == name) {
-                        name = prefab.data._name;
-                    }
-                    node = instantiate(prefab);
-                    this._nodes.set(name, node);
-                    this._show(name, node, siblingIndex, option.params, option.keep || false);
-                }).catch((err) => {
-                    console.error(`${option.path}加载失败`);
-                    this._blockInputNode!.active = false;
-                });
-                return;
+        // 处理层级
+        const priority = option.priority = option.priority || 0;
+        const length = this._showOptions.length;
+        let priorityMax = true;
+        let repeat = false;
+        for (let i = length - 1; i >= 0; i--) {
+            const option = this._showOptions[i];
+            if (priority < option.priority!) {
+                priorityMax = false;
             }
-            node = instantiate(option.prefab);
-            this._nodes.set(name, node);
-            this._show(name, node, siblingIndex, option.params, option.keep || false);
-        } else {
-            this._show(name, node, siblingIndex, option.params, option.keep || false);
-        }
-    }
-
-    private _show(name: string, node: Node, zIndex: number, params: any, keep: boolean) {
-        // 先从缓存中取出
-        let idx = this._popups.indexOf(name);
-        if (idx >= 0) {
-            this._popups.splice(idx, 1);
-        }
-
-        // 层级高的优先显示
-        let curZIndex = this.getCurrentPopup()?.zIndex || 0;
-        if (zIndex < curZIndex) {
-            node.active = false;
-            for (let i = 0; i <= this._popups.length - 1; i++) {
-                let tempNode = this._nodes.get(this._popups[i]);
-                if (zIndex <= (tempNode!.zIndex || 0)) {
-                    this._popups.splice(i, 0, name);
-                    break;
-                }
+            if (option.name === name) {
+                repeat = true;
             }
-        } else if (!keep) {
-            this._hideAll();
-            this._popups.push(name);
         }
-        let popup = node.getComponent(PopupBase);
-        if (null == popup) {
-            this._blockInputNode!.active = false;
-            throw new Error('请将Popup继承PopupBase');
-        }
-        popup._init(name, params);
-        if (node.parent == this._popupNode) {
-            node.parent = null;
-        }
-        node.parent = this._popupNode;
-        if (node.zIndex != zIndex) {
-            node.zIndex = zIndex;
-        }
-        if (zIndex >= curZIndex) {
-            popup!._show().then(() => {
-                this._blockInputNode!.active = false;
-            });
-        } else {
-            this._blockInputNode!.active = false;
-        }
-    }
-
-    private showLast() {
-        let node: Node | null = null;
-        if (this._popups.length > 0) {
-            let name = this._popups[this._popups.length - 1];
-            node = this._nodes.get(name) || null;
-        }
-        if (null == node) {
+        // 剔重
+        if (this.has(name) || repeat) {
+            console.warn(`弹框${name}已被展示`);
             return;
         }
-        if (!node.active) {
-            this._blockInputNode!.active = true;
-            let ui = node.getComponent(PopupBase)!;
-            ui._show().then(() => {
-                this._blockInputNode!.active = false;
-            });
+        if (priorityMax) {
+            this._curOption = option;
         }
+        this._showOptions.push(option);
+        this.dealShow(option);
     }
 
     /**
-     * 隐藏弹框
-     * @param name 弹框的名字
+     * @description 移除弹框
+     * @param name 弹框名
+     * @param mode 销毁模式
+     * @param anim 是否展示隐藏动画
      */
-    hide(name: string) {
-        let idx = this._popups.indexOf(name);
+    remove(name: string, mode = PopupCacheMode.ONCE, anim = true) {
+        const idx = this._popups.indexOf(name);
         let isLast = idx === this._popups.length - 1;
         if (idx >= 0) {
             this._popups.splice(idx, 1);
         }
-        this._hideUI(name);
+        this.hidePopup(name, mode, anim);
         if (isLast) {
             this.showLast();
         }
     }
 
     /**
-     * 隐藏所有弹框
+     * @description 移除所有弹框
+     * @param mode 销毁模式
+     * @param anim 是否展示动画
      */
-    hideAll() {
-        this._hideAll();
-        this._popups.length = 0;
-    }
-
-    _hideAll() {
-        for (let i = 0; i < this._popups.length; i++) {
-            this._hideUI(this._popups[i]);
+    removeAll(mode = PopupCacheMode.ONCE, anim = false) {
+        const lastName = this.getCurrentName();
+        for (let name in this._cacheNodeMap) {
+            if (null == this._cacheNodeMap[name]) {
+                continue;
+            }
+            if (lastName !== name) {
+                const idx = this._popups.indexOf(name);
+                if (idx !== -1) {
+                    this._popups.splice(idx, 1);
+                }
+                this.hidePopup(name, mode, false);
+            }
         }
-    }
-
-    private _hideUI(name: string) {
-        let node = this._nodes.get(name);
-        if (null == node) {
-            console.warn(`${name}已被销毁`);
-            return;
+        if (lastName) {
+            this.remove(lastName, mode, anim);
         }
-        let ui = node.getComponent(PopupBase);
-        ui!._hide();
+        this.cleanAllPopup();
     }
 
     /**
-     * 移除弹框
-     * @param name 弹框名字 
-     * @returns 
-     */
-    remove(name: string) {
-        this.hide(name);
-        let node = this._nodes.get(name);
-        if (null == node) {
-            return;
-        }
-        this._nodes.delete(name);
-        let ui = node.getComponent(PopupBase);
-        ui!._remove();
-    }
-
-    /**
-     * 移除弹框
-     */
-    removeAll() {
-        this.hideAll();
-        for (let name in this._nodes) {
-            this.remove(name);
-        }
-    }
-
-    /**
-     * 获取当前弹框
-     * @returns 弹框Node，如果当前没有弹框，返回null
-     */
-    getCurrentPopup(): Node | null {
-        let name = this.getCurrentName();
-        if (null == name) {
-            return null;
-        }
-        return this._nodes.get(name) || null;
-    }
-
-    /**
-     * 获取当前弹框的名字
-     * @returns 弹框名字，如果当前没有弹框，则返回null
+     * @description 获取当前的弹框名
+     * @returns 弹框名
      */
     getCurrentName(): string | null {
         if (this._popups.length > 0) {
@@ -285,49 +152,205 @@ export class PopupManager {
     }
 
     /**
-     * 根据弹框名，获取弹框Node
+     * @description 是否存在某个弹框
      * @param name 弹框名
-     * @returns 弹框Node,如果没有对应的弹框，则返回null
+     * @returns 
      */
-    getPopup(name: string): Node | null {
-        return this._nodes.get(name) || null;
+    has(name: string): boolean {
+        return this._popups.indexOf(name) !== -1;
     }
 
-    private setNameByPath(path: string, name: string) {
-        if (null == this.getNameByPath(path)) {
-            this._paths.set(path, name);
-        }
+    /**
+     * @description 获取当前的弹框
+     * @returns 
+     */
+    getCurrentPopup(): Node | null {
+        return this.getPopup(this.getCurrentName());
     }
 
-    private getNameByPath(path: string | null | undefined): string | null | undefined {
-        if (null == path) {
+    /**
+     * @description 获取指定弹框
+     * @param name 弹框名 
+     * @returns 
+     */
+    getPopup(name: string | null): Node | null {
+        if (null == name) {
             return null;
         }
-        return this._paths.get(path);
+        return this._cacheNodeMap[name] || null;
     }
 
-
-    private setParent() {
-        if (this._popupInit) {
-            throw new Error('PopupManager已经初始化了');
+    private async dealShow(option: PopupShowOption) {
+        //  弹框过程中，背景不可以点击
+        this._blockInputNode!.active = true;
+        const { name = '', path = '' } = option;
+        let node = this._cacheNodeMap[name];
+        if (!node) {
+            let prefab = option.prefab || this._cachePrefabMap[name];
+            if (!prefab) {
+                prefab = await ResUtil.loadAsset({ bundleName: option.bundleName, path: path, type: Prefab }).catch((e) => {
+                    console.error(e);
+                }) as Prefab;
+                if (!prefab) {
+                    this.completeOption(option);
+                    throw new Error('动态加载的Prefab路径错误');
+                }
+                // 再次判断异步情况
+                if (this.has(name)) {
+                    console.warn(`弹框${name}已被展示`);
+                    this.completeOption(option);
+                    return;
+                }
+                if (this._showOptions.indexOf(option) === -1) { // 当前的已被销毁
+                    // 此处的prefab并没有回收，一般而言影响不大
+                    return;
+                }
+                node = instantiate(prefab);
+                prefab.addRef();
+                this._cachePrefabMap[name] = prefab;
+                this._cacheNodeMap[name] = node;
+            }
         }
-        this._popupNode = new Node('Popup');
-        this._popupNode.layer = Layers.Enum.UI_2D;
-        this._popupNode.parent = rootNode;
+        this.dealPopup(node!, option);
+    }
 
-        let size = view.getVisibleSize();
-        let transform = this._popupNode.addComponent(UITransform);
-        transform.contentSize = size;
-        this._popupInit = true;
+    private async dealPopup(node: Node, option: PopupShowOption) {
+        const popup = node.getComponent(PopupBase);
+        if (null == popup) {
+            this.completeOption(option);
+            throw new Error('请将Popup继承PopupBase');
+        }
+        const { name = '', closePosition, priority = 0, keep, params } = option;
+        let idx = 0;
+        const length = this._popups.length;
+        for (let i = length - 1; i >= 0; i--) {
+            const popupNode = this._cacheNodeMap[this._popups[i]]
+            if (priority >= popupNode!.zIndex) {
+                idx = i + 1;
+            }
+        }
+        this._popups.splice(idx, 0, name);
+        if (node.parent != this._popupNode) {
+            node.removeFromParent();
+            node.parent = this._popupNode;
+        }
+        if (node.zIndex != priority) {
+            node.zIndex = priority;
+        }
+        popup._init(name, params);
+        if (idx === length && this._curOption === option) {
+            // 显示
+            if (!keep) {
+                for (let i = 0; i < length; i++) {
+                    const tempNode = this._cacheNodeMap[this._popups[i]];
+                    // @ts-ignore
+                    if (tempNode && !tempNode.getComponent(PopupBase).keepPopup) {
+                        tempNode.active = false;
+                    }
+                }
+                this.showPopup(popup, option);
+            }
+            return;
+        }
+        node.active = false;
+        this.completeOption(option);
+    }
 
-        this._blockInputNode = new Node('_blockInputNode');
-        this._blockInputNode.addComponent(BlockInputEvents);
-        this._blockInputNode.parent = this._popupNode;
-        this._blockInputNode.zIndex = 0;
-        let blockInputTransform = this._blockInputNode.addComponent(UITransform);
-        blockInputTransform.contentSize = size;
+    private showPopup(popup: PopupBase, option: PopupShowOption) {
+        popup._show().then(() => {
+            this.completeOption(option);
+        });
+    }
+
+    private completeOption(option: PopupShowOption) {
+        const idx = this._showOptions.indexOf(option);
+        if (idx !== -1) {
+            this._showOptions.splice(idx, 1);
+            if (this._showOptions.length === 0) {
+                this._blockInputNode.active = false;
+            }
+        }
+        if (this._curOption === option) {
+            this.showLast();
+        }
+    }
+
+    private hidePopup(name: string, mode = PopupCacheMode.ONCE, anim = true) {
+        const node = this._cacheNodeMap[name];
+        if (null == node) {
+            console.warn(`${name}已被销毁`);
+            return;
+        }
+        if (mode != PopupCacheMode.AWAY) {
+            this._cacheNodeMap[name] = null;
+        }
+        const prefab = this._cachePrefabMap[name]!;
+        if (mode === PopupCacheMode.ONCE) {
+            this._cachePrefabMap[name] = null;
+        }
+        const popup = node.getComponent(PopupBase);
+        if (!node.active) {
+            this.removeNode(node, prefab, mode);
+        } else {
+            popup!._hide();
+            this.removeNode(node, prefab, mode);
+        }
+    }
+
+    private removeNode(node: Node, prefab: Prefab, mode: PopupCacheMode) {
+        if (PopupCacheMode.AWAY === mode) {
+            if (null != node) {
+                node.parent = null;
+            }
+            return;
+        }
+        node.destroy();
+        if (PopupCacheMode.ONCE === mode && prefab) {
+            prefab.decRef();
+        }
+    }
+
+    private showLast() {
+        let node: Node | null = null;
+        if (this._popups.length > 0) {
+            const name = this._popups[this._popups.length - 1];
+            node = this._cacheNodeMap[name];
+        }
+        if (null == node) {
+            return;
+        }
+        if (!node.active) {
+            node.active = true;
+            const popup = node.getComponent(PopupBase)!;
+            if (!popup._isShow) {
+                popup._show();
+            }
+        }
+    }
+
+    private cleanAllPopup() {
+        this._popups.length = 0;
+        this._showOptions.length = 0;
         this._blockInputNode!.active = false;
+    }
+
+    private initParent() {
+        const rootTransform = rootNode.getComponent(UITransform)!;
+        const popupNode = this._popupNode = new Node('PopupNode');
+        popupNode.layer = Layers.Enum.UI_2D;
+        popupNode.addComponent(UITransform)?.setContentSize(rootTransform.contentSize);
+        popupNode.parent = rootNode;
+        popupNode.zIndex = 2;
+
+        // 实现弹框过程中，背景不可以点击
+        const blockInputNode = this._blockInputNode = new Node('BlockInputNode');
+        blockInputNode.addComponent(BlockInputEvents);
+        blockInputNode.addComponent(UITransform)?.setContentSize(rootTransform.contentSize);
+        blockInputNode.parent = this._popupNode;
+        blockInputNode.zIndex = -1;
+        blockInputNode.active = false;
+
+        this._init = true;
 
     }
 }
-
