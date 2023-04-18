@@ -1,7 +1,5 @@
 /**
- *
- * @file Toast.ts
- * @author dream
+ * @author dream93
  * @description 模拟安卓吐司效果
  *
  */
@@ -18,54 +16,60 @@ export enum Gravity {
 
 }
 
+
+
+const imageObj = new Image();
+imageObj.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAQMAAABIeJ9nAAAAA1BMVEX///+nxBvIAAAACklEQVQI12MAAgAABAABINItbwAAAABJRU5ErkJggg==";
+const imageAsset = new ImageAsset(imageObj);
+
+
 export class Toast {
 
-    static readonly LENGTH_SHORT: number = 2; // 短时间吐司
-    static readonly LENGTH_LONG: number = 3.5; // 长时间吐司
+    static readonly LENGTH_SHORT = 2; // 短时间吐司
+    static readonly LENGTH_LONG = 3.5; // 长时间吐司
 
     private static pNode: Node | null = null;
-    private bgNode: Node;
-    private textNode: Node;
+    private _bgNode: Node = null!;
+    private _textNode: Node = null!;
 
-    private node: Node;
-    private text: string = '';
-    private time: number = 1;
-    private textSize: number = 20;
-    private gravity: Gravity = Gravity.BOTTOM;
+    private _node: Node = null!;
+    private _text = '';
+    private _time = 0;
+    private _textSize = 18;
+    private _gravity = Gravity.BOTTOM;
 
     private constructor(node: Node | null) {
         if (null == node) {
-            this.node = this.getPNode();
+            this._node = this.getPNode();
         } else {
-            this.node = node;
+            this._node = node;
         }
 
-        this.bgNode = new Node();
-        this.bgNode.layer = Layers.Enum.UI_2D;
-        this.bgNode.addComponent(BlockInputEvents);
-        let sprite = this.bgNode.addComponent(Sprite);
+        this._bgNode = new Node();
+        this._bgNode.layer = Layers.Enum.UI_2D;
+        this._bgNode.addComponent(BlockInputEvents);
+        const sprite = this._bgNode.addComponent(Sprite);
         sprite.type = Sprite.Type.SLICED;
-        let imageObj = new Image();
-        imageObj.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAQMAAABIeJ9nAAAAA1BMVEX///+nxBvIAAAACklEQVQI12MAAgAABAABINItbwAAAABJRU5ErkJggg==";
-        let textureObj = new Texture2D();
-        textureObj.image = new ImageAsset(imageObj);
-        let sf = new SpriteFrame();
+        const textureObj = new Texture2D();
+        textureObj.image = imageAsset;
+        const sf = new SpriteFrame();
         sf.texture = textureObj;
         sprite.spriteFrame = sf;
         sprite.color = color(0, 0, 0, 200);
-        this.bgNode.active = false;
+        this._bgNode.addComponent(UIOpacity);
+        this._bgNode.active = false;
 
-        this.textNode = new Node('Text');
-        this.textNode.layer = Layers.Enum.UI_2D;
-        let uiTransform = this.textNode.addComponent(UITransform);
-        uiTransform.width = this.node.getComponent(UITransform)!.width;
-        let label = this.textNode.addComponent(Label);
+        this._textNode = new Node('Text');
+        this._textNode.layer = Layers.Enum.UI_2D;
+        const uiTransform = this._textNode.addComponent(UITransform);
+        uiTransform.width = this._node.getComponent(UITransform)!.width;
+        const label = this._textNode.addComponent(Label);
         label.horizontalAlign = Label.HorizontalAlign.CENTER;
         label.verticalAlign = Label.VerticalAlign.CENTER;
-        this.textSize = 20;
-        this.textNode.parent = this.bgNode;
+        this._textSize = 20;
+        this._textNode.parent = this._bgNode;
 
-        this.bgNode.parent = this.node;
+        this._bgNode.parent = this._node;
     }
 
     /**
@@ -87,16 +91,13 @@ export class Toast {
      */
     show() {
         this.setOverFlow();
-        this.bgNode.active = true;
-        let uiOpacity = this.bgNode.getComponent(UIOpacity);
-        if (null == uiOpacity) {
-            uiOpacity = this.bgNode.addComponent(UIOpacity);
-        }
+        this._bgNode.active = true;
+        const uiOpacity = this._bgNode.getComponent(UIOpacity);
         tween(uiOpacity)
-            .delay(this.time)
+            .delay(this._time)
             .to(0.3, { opacity: 0 })
             .call(() => {
-                this.bgNode.destroy();
+                this._bgNode.destroy();
             })
             .start();
     }
@@ -107,9 +108,9 @@ export class Toast {
      * @returns 
      */
     setText(text: string): Toast {
-        this.text = text;
-        let label = this.textNode.getComponent(Label)!;
-        label.string = this.text;
+        this._text = text;
+        let label = this._textNode.getComponent(Label)!;
+        label.string = this._text;
         return this;
     }
 
@@ -118,10 +119,10 @@ export class Toast {
      * @param textSize 文字大小
      * @returns 
      */
-    setTextSize(textSize: number): Toast {
-        this.textSize = textSize;
-        let label = this.textNode.getComponent(Label)!;
-        label.fontSize = this.textSize;
+    setFontSize(textSize: number): Toast {
+        this._textSize = textSize;
+        let label = this._textNode.getComponent(Label)!;
+        label.fontSize = this._textSize;
         return this;
     }
 
@@ -131,7 +132,7 @@ export class Toast {
      * @returns 
      */
     setTime(time: number) {
-        this.time = time;
+        this._time = time;
         return this;
     }
 
@@ -141,24 +142,24 @@ export class Toast {
      * @returns 
      */
     setGravity(gravity: Gravity): Toast {
-        this.gravity = gravity;
+        this._gravity = gravity;
         return this;
     }
 
     private setPosition() {
-        let uiTransform = this.node.getComponent(UITransform)!;
-        let bgUITransform = this.bgNode.getComponent(UITransform)!;
-        if (Gravity.BOTTOM === this.gravity) {
+        let uiTransform = this._node.getComponent(UITransform)!;
+        let bgUITransform = this._bgNode.getComponent(UITransform)!;
+        if (Gravity.BOTTOM === this._gravity) {
             let y = -uiTransform.height / 2 + bgUITransform.height / 2 + 64;
-            this.bgNode.position = v3(0, y, 0);
+            this._bgNode.position = v3(0, y, 0);
         }
     }
 
     private setOverFlow() {
-        let maxLength = this.node.getComponent(UITransform)!.width / 2;
-        let label = this.textNode.getComponent(Label)!;
-        let fontLength = this.text.length * label.fontSize;
-        let uiTransform = this.textNode.getComponent(UITransform)!;
+        let maxLength = this._node.getComponent(UITransform)!.width / 2;
+        let label = this._textNode.getComponent(Label)!;
+        let fontLength = this._text.length * label.fontSize;
+        let uiTransform = this._textNode.getComponent(UITransform)!;
         if (fontLength > maxLength) {
             uiTransform.width = maxLength;
             label.overflow = Label.Overflow.RESIZE_HEIGHT;
@@ -166,7 +167,7 @@ export class Toast {
             uiTransform.width = fontLength;
             label.overflow = Label.Overflow.NONE;
         }
-        let bgUITransform = this.bgNode.getComponent(UITransform)!;
+        let bgUITransform = this._bgNode.getComponent(UITransform)!;
         bgUITransform.width = uiTransform.width + label.fontSize * 4;
         bgUITransform.height = uiTransform.height;
         this.setPosition();
