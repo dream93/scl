@@ -13,6 +13,24 @@ export type Constructor<T extends Asset> = new () => T;
 export module ResUtil {
 
     /**
+     * @description 原生加载资源
+     * @param object {url: 远程地址 option: 参数类型}
+     * @returns 
+     */
+    export function loadRemote<T extends Asset>(object: { url: string, option?: any }) {
+        if (null == object.option) {
+            object.option = {};
+        }
+        const { url, option } = object;
+        return new Promise((resolve, reject) => {
+            assetManager.loadRemote(url, option, (err: Error | null, asset: T) => {
+                resolve && resolve(err ? null : asset);
+            });
+        });
+
+    }
+
+    /**
      * 加载bundle
      * @param bundleName 
      * @returns 
@@ -20,11 +38,7 @@ export module ResUtil {
     export function loadBundle(bundleName: string) {
         return new Promise((resolve, reject) => {
             assetManager.loadBundle(bundleName, (err, bundle) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                resolve(bundle);
+                resolve && resolve(err ? null : bundle);
             });
         });
     }
@@ -45,7 +59,7 @@ export module ResUtil {
      * @param option 
      * @returns 
      */
-    export function loadAsset<T extends Asset>(option: { path: string, bundleName?: string, bundle?: AssetManager.Bundle, type: Constructor<T> }): Promise<T> {
+    export function loadAsset<T extends Asset>(option: { path: string, bundleName?: string, bundle?: AssetManager.Bundle, type: Constructor<T> }) {
         const bundle = getBundle(option.bundleName, option.bundle);
         const asset = bundle.get(option.path, option.type);
         if (null != asset) {
@@ -53,12 +67,7 @@ export module ResUtil {
         }
         return new Promise((resolve, reject) => {
             bundle.load(option.path, option.type, (err, asset: T) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                resolve(asset);
-                return;
+                resolve(err ? null : asset);
             });
         });
     }
