@@ -110,6 +110,9 @@ export class AudioManager {
         if (!clip) {
             return;
         }
+        if (this.isBgmPlaying()) {
+            this.stopBgm();
+        }
         this._bgmAS.clip = clip;
         this._bgmAS.loop = loop;
         this._bgmAS.currentTime = 0;
@@ -292,6 +295,7 @@ export class AudioManager {
             return;
         }
         const as = this._effectAS[index];
+        as.playOnAwake = false;
         as.clip = clip;
         as.loop = loop;
         as.volume = volume;

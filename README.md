@@ -1,120 +1,68 @@
+【toc】
+
 # SCL
 
 SCL是一套基于CocosCreator的极简(Simple)、基于组件(Component)以及类库(Libs)的开源框架，主要服务于休闲类游戏的快速开发。
 
-## 弹框管理使用
+## 弹框管理
 
-1. 在弹框之前初始化
-```
-PopupManager.instance.init();
-```
-2. 将弹框制作成prefab,并挂在继承`PopupBase`的脚本组件
-```
-    /**
-     * 是否设置点击拦截
-     */
-    @property(CCBoolean)
-    blockInput: boolean = true;
+`PopupManager`
 
-    /**
-     * 是否显示弹框动画
-     */
-    @property(CCBoolean)
-    anim: boolean = true;
+### 使用方式
 
-    /**
-     * 弹框动画类型
-     */
-    @property({
-        type: Enum(AnimType),
-        visible() {
-            return (this as any).anim;
-        }
-    })
-    animType: AnimType = AnimType.SCALE;
-```
-3. 显示弹框
-```
-PopupManager.instance.show(option: { name?: string, prefab?: Prefab, path?: string, siblingIndex?: number, params?: any, keep?: boolean });
-```
+`TODO...`
 
-|参数|类型|默认值|说明
-|-|-|-|-|
-|name|string|null|自定义弹框名字|
-|prefab|Prefab|null|Prefab|
-|path|string|null|动态加载的路径|
-|siblingIndex|number|0|层级|
-|params|any|null|传递的参数|
-|keep|boolean|false|是否保留当前弹框|
+### API
 
-4. 隐藏弹框
-```
-PopupManager.instance.hide(name:string);
-// 隐藏所有
-PopupManager.instance.hideAll();
-```
-5. 销毁弹框
-```
-PopupManager.instance.remove(name:string)
-// 销毁所有
-PopupManager.instance.removeAll();
-```
-6. 获取当前弹框
-```
-// 弹框Node，如果当前没有弹框，返回null
-PopupManager.instance.getCurrentPopup():Node|null;
-// 弹框名字，如果当前没有弹框，则返回null
-PopupManager.instance.getCurrentName(): string | null;
-```
-7. 获取某个弹框
-```
-PopupManager.instance.getPopup(name: string): Node | null;
-```
+`TODO...`
+
+## 音效管理
+
+`AudioManager`
+
+### 使用方式
+
+`TODO...`
+
+### API
+
+`TODO...`
 
 ## 本地化存储
 
-`API`
+`SqlUtil`
 
-1. 初始化密钥
-```
-SqlUtil.init(key: string, iv: string);
-```
+### 使用方式
 
-2. 存储
-```
-SqlUtil.set(key: string, value: any);
-```
+`TODO...`
 
-3. 取出
-```
-SqlUtil.get(key: string, defaultValue?: any);
-```
+### API
 
-4. 移除
-```
-SqlUtil.remove(key: string);
-```
-
-5. 清空
-```
-SqlUtil.clear();
-```
+`TODO...`
 
 ## 组件
 
-### CanvasAdapter
+### 屏幕适配
 
-挂载后，选择模式
-- EXACT_FIT = ResolutionPolicy.EXACT_FIT, // 拉伸适配，目前已不被支持
-- NO_BORDER = ResolutionPolicy.NO_BORDER, // 铺满屏幕
-- SHOW_ALL = ResolutionPolicy.SHOW_ALL, // 内容完整显示，裁剪区域
-- FIXED_HEIGHT = ResolutionPolicy.FIXED_HEIGHT, // 适配高
-- FIXED_WIDTH = ResolutionPolicy.FIXED_WIDTH, // 适配宽
-- CUSTOM = 9 // 完整显示内容，但不裁剪区域
+`CanvasAdapter`
+
+#### 使用方式
+
+`TODO...`
+
+#### API
+
+`TODO...`
 
 ### 吐司
 
-```
-Toast.makeTest(node: Node|null, test: string, time:number).show();
-```
+`Toast`
+
+#### 使用方式
+
+`TODO...`
+
+#### API
+
+`TODO...`
 
