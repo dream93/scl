@@ -6,9 +6,11 @@
  *
  */
 
-import { Asset, assetManager, AssetManager, resources } from "cc";
+import { Asset, assetManager, AssetManager, ImageAsset, resources, Texture2D } from "cc";
 
 export type Constructor<T extends Asset> = new () => T;
+
+export const headImgExt = ".head";
 
 export module ResUtil {
 
@@ -71,4 +73,57 @@ export module ResUtil {
             });
         });
     }
+
+    /**
+     * 自定义头像加载流程
+     * 加载头像使用 ResUtil.loadRemote({url, option:{ext:headImgExt}})
+     */
+    export function registerHeadImgLoader() {
+        assetManager.downloader.register(headImgExt, (content, options, onComplete) => {
+            onComplete(null, content);
+        });
+        assetManager.parser.register(headImgExt, downloadDomImage);
+        assetManager.factory.register(headImgExt, createTexture);
+    }
+
+    function createTexture(id: string, data: any, options: any, onComplete: Function) {
+        let out: Texture2D | null = null;
+        let err: Error | null = null;
+        try {
+            out = new Texture2D();
+            const imageAsset = new ImageAsset(data);
+            out.image = imageAsset;
+        } catch (e) {
+            err = e as any as Error;
+        }
+        onComplete && onComplete(err, out);
+    }
+
+    function downloadDomImage(url: string, options: any, onComplete: Function) {
+        const img = new Image();
+        if (window.location.protocol !== 'file:') {
+            img.crossOrigin = 'anonymous';
+        }
+        function loadCallback() {
+            img.removeEventListener('load', loadCallback);
+            img.removeEventListener('error', errorCallback);
+            if (onComplete) {
+                onComplete(null, img);
+            }
+        }
+
+        function errorCallback() {
+            img.removeEventListener('load', loadCallback);
+            img.removeEventListener('error', errorCallback);
+            if (onComplete) {
+                onComplete(new Error(url));
+            }
+        }
+
+        img.addEventListener('load', loadCallback);
+        img.addEventListener('error', errorCallback);
+        img.src = url;
+        return img;
+    }
+
 }
