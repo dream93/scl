@@ -205,9 +205,10 @@ export class PopupManager {
                     // 此处的prefab并没有回收，一般而言影响不大
                     return;
                 }
-                node = instantiate(prefab);
                 prefab.addRef();
                 this._cachePrefabMap[name] = prefab;
+            } else {
+                node = instantiate(prefab);
                 this._cacheNodeMap[name] = node;
             }
         }

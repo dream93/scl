@@ -1,4 +1,4 @@
-export const global: any;
+export let global: any;
 declare global {
 
     class WordArray { }
