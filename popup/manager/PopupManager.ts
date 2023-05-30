@@ -207,10 +207,9 @@ export class PopupManager {
                 }
                 prefab.addRef();
                 this._cachePrefabMap[name] = prefab;
-            } else {
-                node = instantiate(prefab);
-                this._cacheNodeMap[name] = node;
             }
+            node = instantiate(prefab);
+            this._cacheNodeMap[name] = node;
         }
         this.dealPopup(node!, option);
     }
