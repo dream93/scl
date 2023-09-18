@@ -189,6 +189,9 @@ export class AudioManager {
      * @param effectId 音效id
      */
     pauseEffect(effectId: number) {
+        if (effectId === -1) {
+            return;
+        }
         this._effectState[effectId] = AudioState.PAUSED;
         const as = this._effectAS[effectId];
         if (as?.clip) {
@@ -201,6 +204,9 @@ export class AudioManager {
      * @param effectId 音效id
      */
     resumeEffect(effectId: number) {
+        if (effectId === -1) {
+            return;
+        }
         this._effectState[effectId] = AudioState.PLAYING;
         const as = this._effectAS[effectId];
         if (as?.clip) {
@@ -231,6 +237,9 @@ export class AudioManager {
      * @param effectId 音效id
      */
     stopEffect(effectId: number) {
+        if (effectId === -1) {
+            return;
+        }
         this._effectState[effectId] = AudioState.STOPPED;
         const as = this._effectAS[effectId];
         if (as?.clip) {
@@ -271,12 +280,19 @@ export class AudioManager {
                 return i;
             }
         }
+        if (this._effectAS.length === AudioSource.maxAudioChannel - 1) {
+            console.log('音效播放已达最大值');
+            return -1;
+        }
         const as = rootNode.addComponent(AudioSource);
         this._effectAS.push(as);
         return this._effectAS.length - 1;
     }
 
     private async dealEffect(index: number, volume: number, loop: boolean, clip?: AudioClip, path?: string, bundleName?: string, url?: string) {
+        if (index === -1) {
+            return;
+        }
         const loadingId = new Date().getTime() + index;
         this._effectLoading.push(loadingId);
         this._effectState[index] = AudioState.INIT;
@@ -290,13 +306,16 @@ export class AudioManager {
         if (loadIdx === -1) { // 已经停止音效了
             return;
         }
-        if (!clip || AudioState.STOPPED === this._effectState[index]) { // 加载失败 或 已停止
+        if (!clip) { // 加载失败
+            this._effectState[index] = AudioState.STOPPED;
+        }
+        if (AudioState.STOPPED === this._effectState[index]) { // 已停止
             this._effectLoading.splice(loadIdx);
             return;
         }
         const as = this._effectAS[index];
         as.playOnAwake = false;
-        as.clip = clip;
+        as.clip = clip!;
         as.loop = loop;
         as.volume = volume;
         if (AudioState.PAUSED !== this._effectState[index]) { // 非暂停状态

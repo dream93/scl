@@ -188,12 +188,12 @@ export class PopupManager {
         if (!node) {
             let prefab = option.prefab || this._cachePrefabMap[name];
             if (!prefab) {
-                prefab = await ResUtil.loadAsset({ bundleName: option.bundleName, path: path, type: Prefab }).catch((e) => {
+                prefab = await ResUtil.loadAsset({ bundleName: option.bundleName, path, type: Prefab }).catch((e) => {
                     console.error(e);
                 }) as Prefab;
                 if (!prefab) {
                     this.completeOption(option);
-                    throw new Error('动态加载的Prefab路径错误');
+                    throw new Error('动态加载的Prefab路径错误,bundleName=' + option.bundleName + ', path=' + path);
                 }
                 // 再次判断异步情况
                 if (this.has(name)) {
