@@ -34,18 +34,17 @@ export class SCL {
                 if (self.parent) {
                     // 排序
                     const children = self.parent.children;
+                    let siblingIndex = 0;
                     for (let i = children.length - 1; i >= 0; i--) {
                         if (children[i] === self) {
                             continue;
                         }
                         if (zIndex >= children[i].zIndex) {
-                            self.setSiblingIndex(children[i].getSiblingIndex() + 1);
+                            siblingIndex = children[i].getSiblingIndex() + 1;
                             break;
                         }
-                        if (i === 0) {
-                            self.setSiblingIndex(0);
-                        }
                     }
+                    self.setSiblingIndex(siblingIndex);
                 }
             },
             get(): number {
