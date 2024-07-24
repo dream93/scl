@@ -17,12 +17,6 @@ export enum Gravity {
 }
 
 
-
-const imageObj = new Image();
-imageObj.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAQMAAABIeJ9nAAAAA1BMVEX///+nxBvIAAAACklEQVQI12MAAgAABAABINItbwAAAABJRU5ErkJggg==";
-const imageAsset = new ImageAsset(imageObj);
-
-
 export class Toast {
 
     static readonly LENGTH_SHORT = 2; // 短时间吐司
@@ -51,6 +45,9 @@ export class Toast {
         const sprite = this._bgNode.addComponent(Sprite);
         sprite.type = Sprite.Type.SLICED;
         const textureObj = new Texture2D();
+        const imageObj = new Image();
+        imageObj.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAQMAAABIeJ9nAAAAA1BMVEX///+nxBvIAAAACklEQVQI12MAAgAABAABINItbwAAAABJRU5ErkJggg==";
+        const imageAsset = new ImageAsset(imageObj);
         textureObj.image = imageAsset;
         const sf = new SpriteFrame();
         sf.texture = textureObj;

@@ -3,7 +3,7 @@
  * @description 框架初始化
  */
 
-import { Canvas, director, Layers, Node, sys, UITransform, v3, view } from "cc";
+import { Canvas, director, Layers, Node, sys, UITransform, v3, view, Widget } from "cc";
 import { PopupManager } from "./popup/manager/PopupManager";
 
 export let rootNode: Node = null!;
@@ -18,17 +18,13 @@ export class SCL {
         }
         rootNode = new Node('SCL');
         rootNode.layer = Layers.Enum.UI_2D;
-        rootNode.addComponent(Canvas);
-        // Canvas组件依赖UITransform，所以不用额外添加UITransform组件
-        // 如果再次添加，会产生两个UITransform组件
-        // 相关讨论 https://forum.cocos.org/t/topic/127107
-        let transform = rootNode.getComponent(UITransform)!;
+        const widget = rootNode.addComponent(Widget);
+        // widgetManager.AlignFlags.TOP | widgetManager.AlignFlags.BOT | widgetManager.AlignFlags.LEFT | widgetManager.AlignFlags.RIGHT;
+        widget.alignFlags = 1 | 4 | 8 | 32;
+        widget.top = widget.bottom = widget.left = widget.right = 0;
+        widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
         director.getScene()?.addChild(rootNode);
         director.addPersistRootNode(rootNode);
-        let size = view.getVisibleSize();
-
-        transform.contentSize = size;
-        rootNode.position = v3(size.width / 2, size.height / 2, 0);
 
         // 自定义zIndex
         Object.defineProperty(Node.prototype, 'zIndex', {
