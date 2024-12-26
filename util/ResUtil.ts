@@ -1,129 +1,315 @@
-/**
- *
- * @file ResUtil.ts
- * @author dream
- * @description Cocos方法整合，如果Cocos版本升级，造成API修改，仅需修改此处
- *
- */
+import { Asset, AssetManager, ImageAsset, JsonAsset, SpriteAtlas, SpriteFrame, Texture2D, assetManager, path, rect, resources, size } from "cc";
 
-import { Asset, assetManager, AssetManager, ImageAsset, resources, Texture2D } from "cc";
+export type TypeConstructor<T = unknown> = new (...args: any[]) => T;
 
-export type Constructor<T extends Asset> = new () => T;
-
-export const headImgExt = ".head";
-
-export module ResUtil {
+export class ResUtil {
 
     /**
      * @description 原生加载资源
      * @param object {url: 远程地址 option: 参数类型}
      * @returns 
      */
-    export function loadRemote<T extends Asset>(object: { url: string, option?: any }) {
+    static loadRemote<T extends Asset>(object: { url: string, option?: any }): Promise<T>;
+    static loadRemote<T extends Asset>(object: { url: string, option?: any, success: Function, fail?: FailFunction, complete?: Function }): void;
+    static loadRemote<T extends Asset>(object: { url: string, option?: any, success?: Function, fail?: FailFunction, complete?: Function }): Promise<T> | void {
         if (null == object.option) {
             object.option = {};
         }
-        const { url, option } = object;
-        return new Promise((resolve, reject) => {
-            assetManager.loadRemote(url, option, (err: Error | null, asset: T) => {
-                resolve && resolve(err ? null : asset);
+        const { url, option, success, fail, complete } = object;
+        if (success) {
+            this._loadRemote(url, option, success, fail, complete);
+        } else {
+            return new Promise((resolve, reject) => {
+                this._loadRemote(url, option, resolve, reject);
             });
+        }
+    }
+
+    private static _loadRemote<T extends Asset>(url: string, option: any, success: Function, fail?: FailFunction, complete?: Function) {
+        assetManager.loadRemote(url, option, (err, asset: T) => {
+            if (err) {
+                if (!option.ignoreNull) {
+                    console.error('远程资源加载失败:', url, 'err:', err);
+                }
+                fail?.({ errCode: -1, errMsg: err.message });
+            } else {
+                success?.(asset);
+            }
+            complete?.();
         });
 
+    }
+
+
+    /**
+     * @description 加载多个资源
+     * @param option 
+     * @returns 
+     */
+    static loadAssetAny(option: { requests: { bundleName?: string, bundle?: AssetManager.Bundle, path: string, type: typeof Asset }[], success?: Function, fail?: FailFunction, complete?: Function }) {
+        const all = [];
+        for (let i = 0; i < option.requests.length; i++) {
+            all.push(this.loadAsset(option.requests[i]));
+        }
+        return Promise.all(all);
     }
 
     /**
-     * 加载bundle
-     * @param bundleName 
-     * @returns 
+     * 预加载资源
+     * @param option 
      */
-    export function loadBundle(bundleName: string) {
-        return new Promise((resolve, reject) => {
-            assetManager.loadBundle(bundleName, (err, bundle) => {
-                resolve && resolve(err ? null : bundle);
+    static preload(option: {
+        bundleName?: string,
+        bundle?: AssetManager.Bundle,
+        paths: string | string[],
+        type: typeof Asset,
+        success?: (data: AssetManager.RequestItem[]) => void,
+        fail?: FailFunction,
+        complete?: Function
+    }) {
+        this.loadBundle({
+            bundle: option.bundle,
+            bundleName: option.bundleName
+        }).then((bundle) => {
+            bundle.preload(option.paths, option.type, (err, data) => {
+                if (err) {
+                    option.fail?.({ errCode: -1, errMsg: err.message });
+                } else {
+                    option.success?.(data);
+                }
+                option.complete?.();
             });
-        });
+        }).catch(() => { });
     }
 
-    function getBundle(bundleName?: string, bundle?: AssetManager.Bundle) {
-        if (!bundle) {
-            if (null == bundleName || '' === bundleName) {
-                bundle = resources;
-            } else {
-                bundle = assetManager.getBundle(bundleName)!;
-            }
+    static loadAssetSync<T extends Asset>(paths: string, type: TypeConstructor<T>, bundleName?: string): T | null {
+        let bundle: AssetManager.Bundle | null;
+        if (null != bundleName) {
+            bundle = assetManager.getBundle(bundleName!);
+        } else {
+            bundle = resources;
         }
-        return bundle;
+        if (!bundle) {
+            return null;
+        }
+        return bundle.get(paths, type);
     }
+
 
     /**
      * 加载资源
      * @param option 
      * @returns 
      */
-    export function loadAsset<T extends Asset>(option: { path: string, bundleName?: string, bundle?: AssetManager.Bundle, type: Constructor<T> }) {
-        const bundle = getBundle(option.bundleName, option.bundle);
-        const asset = bundle.get(option.path, option.type);
-        if (null != asset) {
-            return Promise.resolve(asset);
+    static loadAsset<T extends Asset>(option: { bundleName?: string, bundle?: AssetManager.Bundle, path: string, type: TypeConstructor<T>, ignoreNull?: boolean }): Promise<T>;
+    static loadAsset<T extends Asset>(option: { bundleName?: string, bundle?: AssetManager.Bundle, path: string, type: TypeConstructor<T>, ignoreNull?: boolean, success?: (asset: T) => void, fail?: FailFunction, complete?: Function }): void;
+    static loadAsset<T extends Asset>(option: {
+        bundleName?: string,
+        bundle?: AssetManager.Bundle,
+        path: string,
+        type: TypeConstructor<T>,
+        ignoreNull?: boolean,
+        success?: (asset: T) => void,
+        fail?: FailFunction,
+        complete?: Function
+    }): Promise<T> | void {
+        if (option.success) {
+            this._loadAsset(option.path, option.type, option.bundle, option.bundleName, option.ignoreNull, option.success, option.fail, option.complete);
+            return;
         }
         return new Promise((resolve, reject) => {
-            bundle.load(option.path, option.type, (err, asset: T) => {
-                resolve(err ? null : asset);
-            });
+            this._loadAsset(option.path, option.type, option.bundle, option.bundleName, option.ignoreNull, resolve as any, reject);
+        });
+
+    }
+
+    private static _loadAsset<T extends Asset>(path: string, type: TypeConstructor<T>, bundle?: AssetManager.Bundle, bundleName?: string, ignoreNull = false, success?: (asset: T) => void, fail?: FailFunction, complete?: Function) {
+        this.loadBundle({
+            bundle: bundle,
+            bundleName: bundleName,
+            success: (bundle: AssetManager.Bundle) => {
+                const asset: T | null = bundle.get(path, type);
+                if (null != asset) {
+                    success?.(asset)
+                    complete?.();
+                    return;
+                }
+                bundle.load(path, type, (err, asset: T) => {
+                    if (err) {
+                        if (!ignoreNull) {
+                            console.error(err);
+                        }
+                        fail?.({ errCode: -1, errMsg: err.message });
+                        complete?.();
+                        return;
+                    }
+                    success?.(asset)
+                    complete?.();
+                });
+            },
+            fail: (err: CustomError) => {
+                if (!ignoreNull) {
+                    console.error('动态资源加载失败:', path, 'err:', err);
+                }
+                fail?.(err);
+                complete?.();
+            }
         });
     }
 
     /**
-     * 自定义头像加载流程
-     * 加载头像使用 ResUtil.loadRemote({url, option:{ext:headImgExt}})
+     * 加载bundle
+     * @param name 
+     * @returns 
      */
-    export function registerHeadImgLoader() {
-        assetManager.downloader.register(headImgExt, (content, options, onComplete) => {
-            onComplete(null, content);
+    static loadBundle(option: { bundle?: AssetManager.Bundle, bundleName?: string }): Promise<AssetManager.Bundle>;
+    static loadBundle(option: { bundle?: AssetManager.Bundle, bundleName?: string, success: (bundle: AssetManager.Bundle) => void, fail?: FailFunction, complete?: Function }): void;
+    static loadBundle(option: {
+        bundle?: AssetManager.Bundle, bundleName?: string, success?: (bundle: AssetManager.Bundle) => void, fail?: FailFunction, complete?: Function
+    }): Promise<AssetManager.Bundle> | void {
+        if (option.success) {
+            this._loadBundle(option.bundle, option.bundleName, option.success, option.fail, option.complete);
+            return;
+        }
+        return new Promise((resolve, reject) => {
+            this._loadBundle(option.bundle, option.bundleName, resolve, reject);
         });
-        assetManager.parser.register(headImgExt, downloadDomImage);
-        assetManager.factory.register(headImgExt, createTexture);
     }
 
-    function createTexture(id: string, data: any, options: any, onComplete: Function) {
-        let out: Texture2D | null = null;
-        let err: Error | null = null;
-        try {
-            out = new Texture2D();
-            const imageAsset = new ImageAsset(data);
-            out.image = imageAsset;
-        } catch (e) {
-            err = e as any as Error;
-        }
-        onComplete && onComplete(err, out);
-    }
-
-    function downloadDomImage(url: string, options: any, onComplete: Function) {
-        const img = new Image();
-        if (window.location.protocol !== 'file:') {
-            img.crossOrigin = 'anonymous';
-        }
-        function loadCallback() {
-            img.removeEventListener('load', loadCallback);
-            img.removeEventListener('error', errorCallback);
-            if (onComplete) {
-                onComplete(null, img);
+    private static _loadBundle(bundle?: AssetManager.Bundle | null, bundleName?: string, success?: (bundle: AssetManager.Bundle) => void, fail?: FailFunction, complete?: Function) {
+        if (!bundle) {
+            if (null == bundleName) {
+                bundle = resources;
+            } else {
+                bundle = assetManager.getBundle(bundleName!);
             }
         }
-
-        function errorCallback() {
-            img.removeEventListener('load', loadCallback);
-            img.removeEventListener('error', errorCallback);
-            if (onComplete) {
-                onComplete(new Error(url));
-            }
+        if (bundle) {
+            success?.(bundle);
+            complete?.();
+            return
         }
-
-        img.addEventListener('load', loadCallback);
-        img.addEventListener('error', errorCallback);
-        img.src = url;
-        return img;
+        assetManager.loadBundle(bundleName!, (err, bundle) => {
+            if (err) {
+                fail?.({ errCode: -1, errMsg: err.message });
+                complete?.();
+                return;
+            }
+            success?.(bundle);
+            complete?.();
+        });
     }
 
+    /**
+     * 预加载目录
+     * @param option 
+     * @returns 
+    */
+    static preloadDir<T extends Asset>(option: { dir: string, type?: TypeConstructor<T>, bundleName?: string, bundle?: AssetManager.Bundle }) {
+        this.loadBundle({
+            bundle: option.bundle,
+            bundleName: option.bundleName
+        }).then((bundle) => {
+            bundle.preloadDir(option.dir, option.type || null);
+        });
+    }
+
+    /**
+     * 加载目录
+     * @param option 
+     * @returns 
+     */
+    static loadDir<T extends Asset>(option: { dir: string, bundleName?: string, bundle?: AssetManager.Bundle, type?: TypeConstructor<T> }): Promise<T[]>;
+    static loadDir<T extends Asset>(option: { dir: string, bundleName?: string, bundle?: AssetManager.Bundle, type?: TypeConstructor<T>, success: (assets: T[]) => void, fail?: FailFunction, complete?: Function }): void;
+    static loadDir<T extends Asset>(option: { dir: string, bundleName?: string, bundle?: AssetManager.Bundle, type?: TypeConstructor<T>, success?: (assets: T[]) => void, fail?: FailFunction, complete?: Function }): Promise<Asset[]> | void {
+        if (option.success) {
+            this._loadDir(option.dir, option.bundle, option.bundleName, option.type, option.success, option.fail, option.complete);
+            return;
+        }
+        return new Promise((resolve, reject) => {
+            this._loadDir(option.dir, option.bundle, option.bundleName, option.type, resolve, reject);
+        });
+    }
+
+    private static _loadDir<T extends Asset>(dir: string, bundle?: AssetManager.Bundle, bundleName?: string, type?: TypeConstructor<T>, success?: (assets: T[]) => void, fail?: FailFunction, complete?: Function) {
+        this.loadBundle({
+            bundle: bundle,
+            bundleName: bundleName,
+            success: (bundle: AssetManager.Bundle) => {
+                if (type) {
+                    bundle.loadDir(dir, type, (err, assets) => {
+                        if (err) {
+                            fail?.({ errCode: -1, errMsg: err.message });
+                            complete?.();
+                            return;
+                        }
+                        success?.(assets)
+                        complete?.();
+                    });
+                } else {
+                    bundle.loadDir(dir, (err, assets) => {
+                        if (err) {
+                            fail?.({ errCode: -1, errMsg: err.message });
+                            complete?.();
+                            return;
+                        }
+                        // @ts-expect-error
+                        success?.(assets)
+                        complete?.();
+                    });
+                }
+            },
+            fail: (err: CustomError) => {
+                fail?.(err);
+                complete?.();
+            }
+        });
+    }
+
+    /**
+     * 加载远程图集
+     * @param url 
+     * @returns 
+     */
+    static loadPlist(url: string): Promise<SpriteAtlas> {
+        return new Promise((resolve, reject) => {
+            this.loadRemote<JsonAsset>({
+                url
+            }).then((plist: JsonAsset) => {
+                const asset = plist._nativeAsset;
+                let texture = asset.metadata.realTextureFileName || asset.metadata.textureFileName;
+                texture = path.join(path.dirname(url), texture);
+                this.loadRemote<ImageAsset>({
+                    url: texture
+                }).then((image: ImageAsset) => {
+                    const texture = new Texture2D();
+                    const sa = new SpriteAtlas();
+                    texture.image = image;
+                    const frames = asset.frames;
+                    const sfs = sa.spriteFrames;
+                    const plistRegex = /[,{}\s]+/;
+                    const tmpRect = rect();
+                    const tmpSize = size();
+                    for (const key in frames) {
+                        const sf = new SpriteFrame();
+                        const frame = frames[key];
+                        sf.texture = texture;
+                        let tmp: string[] = frame.frame.split(plistRegex, 5);
+                        sf.rect = tmpRect.set(parseInt(tmp[1]), parseInt(tmp[2]), parseInt(tmp[3]), parseInt(tmp[4]));
+                        tmp = frame.offset.split(plistRegex, 3);
+                        sf.offset = tmpRect.set(parseInt(tmp[1]), parseInt(tmp[2]));
+                        tmp = frame.sourceSize.split(plistRegex, 3);
+                        sf.originalSize = tmpSize.set(parseInt(tmp[1]), parseInt(tmp[2]));
+                        sf.rotated = frame.rotated;
+                        sfs[key.slice(0, -4)] = sf; //key需要去掉后缀.png
+                    }
+                    resolve(sa);
+                }).catch((err) => {
+                    reject(err);
+                });
+            }).catch((err) => {
+                reject(err);
+            });
+        });
+    }
 }

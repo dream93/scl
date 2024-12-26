@@ -6,7 +6,7 @@
  *              2. 同优先级后来的先展示
  */
 
-import { BlockInputEvents, instantiate, Layers, Node, path, Prefab, UITransform, Vec3 } from "cc";
+import { BlockInputEvents, instantiate, Layers, Node, path, Prefab, UITransform, Vec3, Widget } from "cc";
 import { PopupBase } from "../base/PopupBase";
 import { ResUtil } from "../../util/ResUtil";
 import { rootNode } from "../../SCL";
@@ -335,17 +335,23 @@ export class PopupManager {
     }
 
     private initParent() {
-        const rootTransform = rootNode.getComponent(UITransform)!;
         const popupNode = this._popupNode = new Node('PopupNode');
         popupNode.layer = Layers.Enum.UI_2D;
-        popupNode.addComponent(UITransform)?.setContentSize(rootTransform.contentSize);
+        const widget = popupNode.addComponent(Widget);
+        widget.alignFlags = 1 | 4 | 8 | 32;
+        widget.top = widget.bottom = widget.left = widget.right = 0;
+        widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
         popupNode.parent = rootNode;
         popupNode.zIndex = 2;
+
 
         // 实现弹框过程中，背景不可以点击
         const blockInputNode = this._blockInputNode = new Node('BlockInputNode');
         blockInputNode.addComponent(BlockInputEvents);
-        blockInputNode.addComponent(UITransform)?.setContentSize(rootTransform.contentSize);
+        const blockWidget = blockInputNode.addComponent(Widget);
+        blockWidget.alignFlags = 1 | 4 | 8 | 32;
+        blockWidget.top = blockWidget.bottom = blockWidget.left = blockWidget.right = 0;
+        blockWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
         blockInputNode.parent = this._popupNode;
         blockInputNode.zIndex = -1;
         blockInputNode.active = false;
