@@ -3,7 +3,7 @@
  * @description 框架初始化
  */
 
-import { Canvas, director, Layers, Node, sys, UITransform, v3, view, Widget } from "cc";
+import { Canvas, director, Layers, Node, Sprite, SpriteFrame, sys, UITransform, v3, view, Widget } from "cc";
 import { PopupManager } from "./popup/manager/PopupManager";
 
 export let rootNode: Node = null!;
@@ -18,6 +18,7 @@ export class SCL {
         }
         rootNode = new Node('SCL');
         rootNode.layer = Layers.Enum.UI_2D;
+        rootNode.addComponent(Canvas);
         const widget = rootNode.addComponent(Widget);
         // widgetManager.AlignFlags.TOP | widgetManager.AlignFlags.BOT | widgetManager.AlignFlags.LEFT | widgetManager.AlignFlags.RIGHT;
         widget.alignFlags = 1 | 4 | 8 | 32;
@@ -62,8 +63,8 @@ export class SCL {
     window.scl = window.scl || {};
     if (!scl.login) {
         scl.login = function (res) {
-            res.success && res.success({ code: 'test', pf: 'device' });
-            res.complete && res.complete();
+            res?.success?.({ code: 'test', pf: 'device' });
+            res?.complete?.();
         }
     }
 
